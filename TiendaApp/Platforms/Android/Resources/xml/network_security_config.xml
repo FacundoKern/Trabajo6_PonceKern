@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android bloquea HTTP sin cifrar por defecto. Se habilita solo para la API en Somee
+     (sin HTTPS en el plan gratuito) y para 10.0.2.2, que es la PC vista desde el emulador. -->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">somee.com</domain>
+        <domain includeSubdomains="false">10.0.2.2</domain>
+    </domain-config>
+</network-security-config>

@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using TiendaApp.Services;
 
 namespace TiendaApp;
 
@@ -15,6 +16,13 @@ public static class MauiProgram
 			});
 
 		builder.Services.AddMauiBlazorWebView();
+
+		// HttpClient único apuntando a la API
+		builder.Services.AddSingleton(new HttpClient
+		{
+			BaseAddress = new Uri(ApiConfig.BaseUrl),
+			Timeout = TimeSpan.FromSeconds(30)
+		});
 
 #if DEBUG
 		builder.Services.AddBlazorWebViewDeveloperTools();
