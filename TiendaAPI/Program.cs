@@ -62,7 +62,7 @@ builder.Services.AddEndpointsApiExplorer();
 
 var app = builder.Build();
 
-// ---------- Migraciones automáticas + seed del usuario admin ----------
+// ---------- Migraciones automáticas + datos iniciales (admin y Consumidor Final) ----------
 // Práctico para hosting gratuito, donde no siempre se tiene acceso a consola remota.
 using (var scope = app.Services.CreateScope())
 {
@@ -78,6 +78,13 @@ using (var scope = app.Services.CreateScope())
             Rol = "Admin",
             PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin123$")
         });
+        db.SaveChanges();
+    }
+
+    // Cliente genérico para ventas de mostrador (la app lo ofrece por defecto en el checkout)
+    if (!db.Clientes.Any(c => c.Nombre == "Consumidor" && c.Apellido == "Final"))
+    {
+        db.Clientes.Add(new Cliente { Nombre = "Consumidor", Apellido = "Final" });
         db.SaveChanges();
     }
 }
