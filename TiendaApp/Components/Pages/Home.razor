@@ -3,6 +3,10 @@
 
 <h1>Tienda</h1>
 
+<AuthorizeView>
+    <p>Hola, <strong>@context.User.Identity?.Name</strong>.</p>
+</AuthorizeView>
+
 <p class="text-muted small">API: @ApiConfig.BaseUrl</p>
 
 @if (verificando)
@@ -33,10 +37,8 @@ else
         error = null;
         try
         {
-            // Sin token la API responde 401: eso alcanza para saber que está viva
             var respuesta = await Http.GetAsync("api/productos?tamanioPagina=1");
-            apiEnLinea = respuesta.IsSuccessStatusCode
-                || respuesta.StatusCode == System.Net.HttpStatusCode.Unauthorized;
+            apiEnLinea = respuesta.IsSuccessStatusCode;
             if (!apiEnLinea) error = $"HTTP {(int)respuesta.StatusCode}";
         }
         catch (Exception ex)
