@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Json;
 using TiendaApp.Models;
 
@@ -8,11 +8,13 @@ public class AuthService
 {
     private readonly HttpClient _http;
     private readonly SesionService _sesion;
+    private readonly CarritoService _carrito;
 
-    public AuthService(HttpClient http, SesionService sesion)
+    public AuthService(HttpClient http, SesionService sesion, CarritoService carrito)
     {
         _http = http;
         _sesion = sesion;
+        _carrito = carrito;
     }
 
     // Devuelve null si el login salió bien, o el mensaje de error para mostrar
@@ -41,5 +43,10 @@ public class AuthService
         return null;
     }
 
-    public Task LogoutAsync() => _sesion.CerrarSesionAsync();
+    // El carrito no pasa de un usuario a otro
+    public Task LogoutAsync()
+    {
+        _carrito.Vaciar();
+        return _sesion.CerrarSesionAsync();
+    }
 }

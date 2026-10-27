@@ -32,6 +32,8 @@ public static class MauiProgram
 		});
 		builder.Services.AddSingleton<AuthService>();
 		builder.Services.AddSingleton<CatalogoService>();
+		builder.Services.AddSingleton<CarritoService>();
+		builder.Services.AddSingleton<VentasService>();
 
 #if ANDROID
 		// La app corre en https://0.0.0.1 dentro del WebView y las imágenes de Somee vienen por http:

@@ -1,0 +1,158 @@
+@page "/pago"
+@inject CarritoService Carrito
+@inject VentasService Ventas
+@inject NavigationManager Nav
+
+<a href="carrito" class="btn btn-link px-0 mb-2">&larr; Volver al carrito</a>
+<h1 class="h3 mb-3">Pago</h1>
+
+@if (Carrito.Items.Count == 0)
+{
+    <div class="text-center text-muted py-5">
+        <p>No hay productos para pagar.</p>
+        <a href="" class="btn btn-primary">Ver productos</a>
+    </div>
+}
+else
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <h2 class="h6">Resumen</h2>
+            @foreach (var item in Carrito.Items)
+            {
+                <div class="d-flex justify-content-between small gap-2">
+                    <span class="text-truncate">@item.Cantidad × @item.Nombre</span>
+                    <span class="text-nowrap">@Formato.Precio(item.Subtotal)</span>
+                </div>
+            }
+            <hr class="my-2" />
+            <div class="d-flex justify-content-between fw-semibold fs-5">
+                <span>Total</span>
+                <span>@Formato.Precio(Carrito.Total)</span>
+            </div>
+        </div>
+    </div>
+
+    <h2 class="h6">Medio de pago</h2>
+    <div class="d-flex flex-column gap-2 mb-3">
+        @foreach (var (medio, descripcion) in Medios)
+        {
+            <label class="card medio @(medioPago == medio ? "border-primary" : "")">
+                <span class="card-body py-2 d-flex align-items-center gap-2">
+                    <input type="radio" class="form-check-input mt-0" name="medio" checked="@(medioPago == medio)"
+                           @onchange="() => ElegirMedio(medio)" disabled="@procesando" />
+                    <span>
+                        <span class="d-block fw-medium">@medio</span>
+                        <span class="d-block small text-muted">@descripcion</span>
+                    </span>
+                </span>
+            </label>
+        }
+    </div>
+
+    @if (medioPago == MediosPago.Tarjeta)
+    {
+        <div class="mb-3">
+            <label class="form-label" for="tarjeta">Número de tarjeta</label>
+            <input id="tarjeta" type="tel" inputmode="numeric" autocomplete="off" class="form-control"
+                   placeholder="4111 1111 1111 1111" maxlength="23"
+                   @bind="numeroTarjeta" @bind:event="oninput" disabled="@procesando" />
+            <div class="form-text">Pago simulado: no se hace ningún cobro real. Una tarjeta terminada en 0000 sale rechazada.</div>
+        </div>
+    }
+
+    <div class="mb-3">
+        <label class="form-label" for="observaciones">Observaciones <span class="text-muted small">(opcional)</span></label>
+        <input id="observaciones" class="form-control" maxlength="250" @bind="observaciones" disabled="@procesando" />
+    </div>
+
+    @if (error is not null)
+    {
+        <div class="alert alert-danger error">@error</div>
+    }
+
+    <button class="btn btn-success btn-lg w-100 mb-4" @onclick="Pagar" disabled="@procesando">
+        @if (procesando)
+        {
+            <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+            <span>Procesando pago...</span>
+        }
+        else
+        {
+            <span>Pagar @Formato.Precio(Carrito.Total)</span>
+        }
+    </button>
+}
+
+@code {
+    private static readonly (string Medio, string Descripcion)[] Medios =
+    [
+        (MediosPago.Efectivo, "Pagás al retirar"),
+        (MediosPago.Tarjeta, "Crédito o débito"),
+        (MediosPago.Transferencia, "Desde tu banco o billetera virtual")
+    ];
+
+    private string medioPago = MediosPago.Efectivo;
+    private string numeroTarjeta = string.Empty;
+    private string? observaciones;
+    private bool procesando;
+    private string? error;
+
+    private void ElegirMedio(string medio)
+    {
+        medioPago = medio;
+        error = null;
+    }
+
+    private async Task Pagar()
+    {
+        error = null;
+
+        var digitos = new string(numeroTarjeta.Where(char.IsDigit).ToArray());
+        if (medioPago == MediosPago.Tarjeta && (digitos.Length < 13 || digitos.Length > 19))
+        {
+            error = "El número de tarjeta debe tener entre 13 y 19 dígitos.";
+            return;
+        }
+
+        procesando = true;
+        try
+        {
+            var clienteId = await Ventas.ObtenerConsumidorFinalIdAsync();
+            if (clienteId is null)
+            {
+                error = "No está configurado el cliente \"Consumidor Final\" en el servidor.";
+                return;
+            }
+
+            var (venta, mensajeError) = await Ventas.RegistrarAsync(new VentaRequest
+            {
+                ClienteId = clienteId.Value,
+                Observaciones = string.IsNullOrWhiteSpace(observaciones) ? null : observaciones.Trim(),
+                MedioPago = medioPago,
+                NumeroTarjeta = medioPago == MediosPago.Tarjeta ? digitos : null,
+                Detalles = Carrito.Items
+                    .Select(i => new VentaDetalleRequest { ProductoId = i.ProductoId, Cantidad = i.Cantidad })
+                    .ToList()
+            });
+
+            if (venta is null)
+            {
+                // Pago rechazado o falta de stock: el carrito queda como estaba para corregir y reintentar
+                error = mensajeError;
+                return;
+            }
+
+            Carrito.Vaciar();
+            Nav.NavigateTo($"venta/{venta.Id}", replace: true);
+        }
+        catch (Exception)
+        {
+            error = "No se pudo completar el pago. Revisá la conexión e intentá de nuevo.";
+        }
+        finally
+        {
+            procesando = false;
+        }
+    }
+}

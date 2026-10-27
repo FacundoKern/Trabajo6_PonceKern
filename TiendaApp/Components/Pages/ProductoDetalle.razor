@@ -1,5 +1,6 @@
-@page "/producto/{Id:int}"
+﻿@page "/producto/{Id:int}"
 @inject CatalogoService Catalogo
+@inject CarritoService Carrito
 
 <button class="btn btn-link px-0 mb-2" @onclick="Volver">&larr; Volver al catálogo</button>
 
@@ -43,6 +44,31 @@ else
             {
                 <p class="text-success fw-semibold mb-1">Stock disponible</p>
                 <p class="text-muted small">@producto.Stock @(producto.Stock == 1 ? "unidad" : "unidades")</p>
+
+                @if (Disponible > 0)
+                {
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <span class="small text-muted">Cantidad</span>
+                        <div class="input-group input-group-sm selector-cantidad">
+                            <button class="btn btn-outline-secondary" @onclick="() => cantidad--" disabled="@(cantidad <= 1)">&minus;</button>
+                            <span class="form-control text-center">@cantidad</span>
+                            <button class="btn btn-outline-secondary" @onclick="() => cantidad++" disabled="@(cantidad >= Disponible)">+</button>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary w-100 mb-2" @onclick="Agregar">Agregar al carrito</button>
+                }
+                else
+                {
+                    <p class="small text-muted">Ya tenés en el carrito todo el stock disponible.</p>
+                }
+
+                @if (mensaje is not null)
+                {
+                    <div class="alert alert-success py-2 d-flex justify-content-between align-items-center">
+                        <span>@mensaje</span>
+                        <a href="carrito" class="alert-link">Ver carrito</a>
+                    </div>
+                }
             }
 
             @if (!string.IsNullOrWhiteSpace(producto.Descripcion))
@@ -60,6 +86,8 @@ else
     [Inject] private IJSRuntime JS { get; set; } = default!;
 
     private Producto? producto;
+    private int cantidad = 1;
+    private string? mensaje;
     private bool cargando = true;
     private string? error;
 
@@ -69,6 +97,8 @@ else
     {
         cargando = true;
         error = null;
+        mensaje = null;
+        cantidad = 1;
         try
         {
             producto = await Catalogo.ObtenerProductoAsync(Id);
@@ -78,6 +108,18 @@ else
             error = "No se pudo cargar el producto. Revisá la conexión.";
         }
         cargando = false;
+    }
+
+    // Lo que todavía se puede agregar, descontando lo que ya está en el carrito
+    private int Disponible => producto is null ? 0 : producto.Stock - Carrito.CantidadDe(producto.Id);
+
+    private void Agregar()
+    {
+        if (producto is null) return;
+
+        var agregadas = Carrito.Agregar(producto, cantidad);
+        mensaje = agregadas == 1 ? "Se agregó 1 unidad al carrito." : $"Se agregaron {agregadas} unidades al carrito.";
+        cantidad = 1;
     }
 
     // Igual que el botón "atrás" del teléfono
