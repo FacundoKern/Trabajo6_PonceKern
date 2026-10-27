@@ -37,12 +37,16 @@ namespace TiendaAPI.Controllers
             CategoriaNombre = p.Categoria?.Nombre
         };
 
-        // GET: api/productos?pagina=1&tamanioPagina=10&buscar=mouse&categoriaId=2
+        // GET: api/productos?pagina=1&tamanioPagina=10&buscar=mouse&categoriaId=2&soloActivos=true
+        // soloActivos=true lo usa el catálogo de la app para no mostrar productos dados de baja
         [HttpGet]
         public async Task<ActionResult<PagedResult<ProductoDto>>> GetProductos(
-            [FromQuery] PaginacionParams parametros, [FromQuery] int? categoriaId)
+            [FromQuery] PaginacionParams parametros, [FromQuery] int? categoriaId, [FromQuery] bool soloActivos = false)
         {
             var query = _context.Productos.Include(p => p.Categoria).AsQueryable();
+
+            if (soloActivos)
+                query = query.Where(p => p.Activo);
 
             if (!string.IsNullOrWhiteSpace(parametros.Buscar))
                 query = query.Where(p => p.Nombre.Contains(parametros.Buscar));
