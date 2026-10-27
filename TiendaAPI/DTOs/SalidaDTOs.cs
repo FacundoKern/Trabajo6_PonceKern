@@ -22,6 +22,13 @@ namespace TiendaAPI.DTOs
         [MaxLength(250)]
         public string? Observaciones { get; set; }
 
+        // Efectivo / Tarjeta / Transferencia
+        [Required]
+        public string MedioPago { get; set; } = "Efectivo";
+
+        // Solo para MedioPago = "Tarjeta". Número ficticio (terminado en 0000 = rechazado)
+        public string? NumeroTarjeta { get; set; }
+
         [Required, MinLength(1, ErrorMessage = "Debe incluir al menos un producto")]
         public List<SalidaDetalleCreateDto> Detalles { get; set; } = new();
     }
@@ -42,6 +49,10 @@ namespace TiendaAPI.DTOs
         public int ClienteId { get; set; }
         public string? ClienteNombre { get; set; }
         public string? Observaciones { get; set; }
+        public string MedioPago { get; set; } = string.Empty;
+        public string EstadoPago { get; set; } = string.Empty;
+        public string? CodigoOperacion { get; set; }
+        public string? TarjetaUltimos4 { get; set; }
         public decimal Total { get; set; }
         public List<SalidaDetalleDto> Detalles { get; set; } = new();
     }

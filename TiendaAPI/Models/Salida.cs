@@ -17,6 +17,23 @@ namespace TiendaAPI.Models
         [MaxLength(250)]
         public string? Observaciones { get; set; }
 
+        // ---- Pago simulado ----
+        // Efectivo / Tarjeta / Transferencia
+        [Required, MaxLength(20)]
+        public string MedioPago { get; set; } = "Efectivo";
+
+        // Solo se guardan las ventas con pago aprobado; queda registrado por claridad
+        [Required, MaxLength(20)]
+        public string EstadoPago { get; set; } = "Aprobado";
+
+        // Código que devuelve la "pasarela" simulada
+        [MaxLength(40)]
+        public string? CodigoOperacion { get; set; }
+
+        // Nunca se guarda el número completo de la tarjeta, solo los últimos 4 dígitos
+        [MaxLength(4)]
+        public string? TarjetaUltimos4 { get; set; }
+
         [NotMapped]
         public decimal Total => Detalles?.Sum(d => d.Cantidad * d.PrecioUnitario) ?? 0;
 

@@ -27,6 +27,10 @@ namespace TiendaAPI.Controllers
             ClienteId = s.ClienteId,
             ClienteNombre = s.Cliente is null ? null : $"{s.Cliente.Nombre} {s.Cliente.Apellido}",
             Observaciones = s.Observaciones,
+            MedioPago = s.MedioPago,
+            EstadoPago = s.EstadoPago,
+            CodigoOperacion = s.CodigoOperacion,
+            TarjetaUltimos4 = s.TarjetaUltimos4,
             Total = s.Detalles.Sum(d => d.Cantidad * d.PrecioUnitario),
             Detalles = s.Detalles.Select(d => new SalidaDetalleDto
             {
@@ -81,6 +85,7 @@ namespace TiendaAPI.Controllers
 
         // POST: api/salidas
         // Registra una venta a cliente y RESTA el stock. No permite vender sin stock suficiente.
+        // Antes de guardar se procesa el pago simulado; si se rechaza, no se registra la venta.
         [HttpPost]
         public async Task<ActionResult<SalidaDto>> CrearSalida(SalidaCreateDto dto)
         {
@@ -125,12 +130,24 @@ namespace TiendaAPI.Controllers
                     return BadRequest(new { mensaje = "No se pudo registrar la venta", errores });
                 }
 
-                // 2) Descontar stock y armar la venta
+                // 2) Procesar el pago simulado
+                var pago = PagoSimulado.Procesar(dto.MedioPago, dto.NumeroTarjeta);
+                if (!pago.Aprobado)
+                {
+                    await transaccion.RollbackAsync();
+                    return BadRequest(new { mensaje = pago.Mensaje, errores = new[] { pago.Mensaje } });
+                }
+
+                // 3) Descontar stock y armar la venta
                 var salida = new Salida
                 {
                     ClienteId = dto.ClienteId,
                     Observaciones = dto.Observaciones,
-                    Fecha = DateTime.UtcNow
+                    Fecha = DateTime.UtcNow,
+                    MedioPago = dto.MedioPago,
+                    EstadoPago = "Aprobado",
+                    CodigoOperacion = pago.CodigoOperacion,
+                    TarjetaUltimos4 = pago.TarjetaUltimos4
                 };
 
                 foreach (var linea in dto.Detalles)
