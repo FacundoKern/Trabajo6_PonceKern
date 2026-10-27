@@ -10,8 +10,8 @@ namespace TiendaAPI.DTOs
         [Range(1, int.MaxValue, ErrorMessage = "La cantidad debe ser mayor a 0")]
         public int Cantidad { get; set; }
 
-        [Range(0, double.MaxValue)]
-        public decimal PrecioUnitario { get; set; }
+        // El precio NO se recibe del cliente: la API usa el precio actual del producto,
+        // así nadie puede vender a un precio inventado desde la app.
     }
 
     public class SalidaCreateDto

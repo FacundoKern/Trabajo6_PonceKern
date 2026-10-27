@@ -135,13 +135,14 @@ namespace TiendaAPI.Controllers
 
                 foreach (var linea in dto.Detalles)
                 {
-                    productos[linea.ProductoId].Stock -= linea.Cantidad;
+                    var producto = productos[linea.ProductoId];
+                    producto.Stock -= linea.Cantidad;
 
                     salida.Detalles.Add(new SalidaDetalle
                     {
                         ProductoId = linea.ProductoId,
                         Cantidad = linea.Cantidad,
-                        PrecioUnitario = linea.PrecioUnitario
+                        PrecioUnitario = producto.Precio // precio vigente al momento de la venta
                     });
                 }
 
