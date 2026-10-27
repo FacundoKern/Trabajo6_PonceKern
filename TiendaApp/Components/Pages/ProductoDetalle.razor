@@ -1,0 +1,85 @@
+@page "/producto/{Id:int}"
+@inject CatalogoService Catalogo
+
+<button class="btn btn-link px-0 mb-2" @onclick="Volver">&larr; Volver al catálogo</button>
+
+@if (cargando)
+{
+    <div class="text-center text-muted py-5">
+        <div class="spinner-border" role="status"></div>
+    </div>
+}
+else if (error is not null)
+{
+    <div class="alert alert-danger">
+        @error
+        <button class="btn btn-sm btn-outline-danger ms-2" @onclick="CargarAsync">Reintentar</button>
+    </div>
+}
+else if (producto is null)
+{
+    <div class="alert alert-warning">El producto no existe.</div>
+}
+else
+{
+    <div class="detalle">
+        <div class="card overflow-hidden">
+            <ImagenProducto Ruta="@producto.ImagenUrl" Alt="@producto.Nombre" />
+        </div>
+
+        <div>
+            @if (producto.CategoriaNombre is not null)
+            {
+                <p class="text-muted small mb-1">@producto.CategoriaNombre</p>
+            }
+            <h1 class="h4">@producto.Nombre</h1>
+            <p class="precio">@Formato.Precio(producto.Precio)</p>
+
+            @if (!producto.Activo || producto.SinStock)
+            {
+                <p class="text-danger fw-semibold">Sin stock disponible</p>
+            }
+            else
+            {
+                <p class="text-success fw-semibold mb-1">Stock disponible</p>
+                <p class="text-muted small">@producto.Stock @(producto.Stock == 1 ? "unidad" : "unidades")</p>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(producto.Descripcion))
+            {
+                <h2 class="h6 mt-4">Descripción</h2>
+                <p class="descripcion">@producto.Descripcion</p>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    [Inject] private IJSRuntime JS { get; set; } = default!;
+
+    private Producto? producto;
+    private bool cargando = true;
+    private string? error;
+
+    protected override Task OnParametersSetAsync() => CargarAsync();
+
+    private async Task CargarAsync()
+    {
+        cargando = true;
+        error = null;
+        try
+        {
+            producto = await Catalogo.ObtenerProductoAsync(Id);
+        }
+        catch (Exception)
+        {
+            error = "No se pudo cargar el producto. Revisá la conexión.";
+        }
+        cargando = false;
+    }
+
+    // Igual que el botón "atrás" del teléfono
+    private async Task Volver() => await JS.InvokeVoidAsync("history.back");
+}

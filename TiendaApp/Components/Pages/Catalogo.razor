@@ -1,0 +1,160 @@
+@page "/"
+@implements IDisposable
+@inject CatalogoService Servicio
+
+<h1 class="h3 mb-3">Catálogo</h1>
+
+<div class="buscador mb-2">
+    <input type="search" class="form-control" placeholder="Buscar productos..."
+           @bind="buscar" @bind:event="oninput" @bind:after="BuscarConDemora" />
+</div>
+
+@if (categorias.Count > 0)
+{
+    <div class="categorias mb-3">
+        <button class="btn btn-sm @(categoriaId is null ? "btn-primary" : "btn-outline-secondary")"
+                @onclick="() => ElegirCategoria(null)">Todas</button>
+        @foreach (var c in categorias)
+        {
+            <button class="btn btn-sm @(categoriaId == c.Id ? "btn-primary" : "btn-outline-secondary")"
+                    @onclick="() => ElegirCategoria(c.Id)">@c.Nombre</button>
+        }
+    </div>
+}
+
+@if (error is not null)
+{
+    <div class="alert alert-danger">
+        @error
+        <button class="btn btn-sm btn-outline-danger ms-2" @onclick="() => CargarAsync(reiniciar: true)">Reintentar</button>
+    </div>
+}
+else if (cargando && productos.Count == 0)
+{
+    <div class="text-center text-muted py-5">
+        <div class="spinner-border" role="status"></div>
+        <p class="mt-2">Cargando productos...</p>
+    </div>
+}
+else if (productos.Count == 0)
+{
+    <p class="text-muted py-4 text-center">No hay productos que coincidan con la búsqueda.</p>
+}
+else
+{
+    <p class="text-muted small mb-2">@total @(total == 1 ? "producto" : "productos")</p>
+
+    <div class="grilla">
+        @foreach (var p in productos)
+        {
+            <a class="card tarjeta text-reset text-decoration-none" href="producto/@p.Id">
+                <ImagenProducto Ruta="@p.ImagenUrl" Alt="@p.Nombre" />
+                <div class="card-body p-2">
+                    <div class="precio">@Formato.Precio(p.Precio)</div>
+                    <div class="nombre">@p.Nombre</div>
+                    @if (p.SinStock)
+                    {
+                        <span class="badge text-bg-secondary">Sin stock</span>
+                    }
+                    else if (p.Stock <= 5)
+                    {
+                        <span class="small text-danger">¡Últimas @p.Stock unidades!</span>
+                    }
+                </div>
+            </a>
+        }
+    </div>
+
+    @if (haySiguiente)
+    {
+        <div class="text-center my-3">
+            <button class="btn btn-outline-primary" @onclick="() => CargarAsync(reiniciar: false)" disabled="@cargando">
+                @(cargando ? "Cargando..." : "Ver más productos")
+            </button>
+        </div>
+    }
+}
+
+@code {
+    private const int TamanioPagina = 12;
+
+    private readonly List<Producto> productos = new();
+    private List<Categoria> categorias = new();
+    private string buscar = string.Empty;
+    private int? categoriaId;
+    private int pagina;
+    private int total;
+    private bool haySiguiente;
+    private bool cargando;
+    private string? error;
+    private CancellationTokenSource? demora;
+    private int consulta;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var carga = CargarAsync(reiniciar: true);
+        try
+        {
+            categorias = await Servicio.ObtenerCategoriasAsync();
+        }
+        catch
+        {
+            // Sin categorías se puede seguir usando el catálogo
+        }
+        await carga;
+    }
+
+    private async Task CargarAsync(bool reiniciar)
+    {
+        if (reiniciar)
+        {
+            productos.Clear();
+            pagina = 0;
+        }
+
+        // Si mientras tanto se pidió otra búsqueda, esta respuesta ya no sirve
+        var numero = ++consulta;
+        cargando = true;
+        error = null;
+        try
+        {
+            var resultado = await Servicio.BuscarProductosAsync(buscar, categoriaId, pagina + 1, TamanioPagina);
+            if (numero != consulta) return;
+
+            productos.AddRange(resultado.Items);
+            pagina = resultado.PaginaActual;
+            total = resultado.TotalRegistros;
+            haySiguiente = resultado.TienePaginaSiguiente;
+        }
+        catch (Exception)
+        {
+            if (numero != consulta) return;
+            error = "No se pudieron cargar los productos. Revisá la conexión.";
+        }
+        cargando = false;
+    }
+
+    // Espera a que el usuario deje de escribir para no pedirle a la API una búsqueda por cada letra
+    private async Task BuscarConDemora()
+    {
+        demora?.Cancel();
+        demora = new CancellationTokenSource();
+        try
+        {
+            await Task.Delay(400, demora.Token);
+        }
+        catch (TaskCanceledException)
+        {
+            return;
+        }
+        await CargarAsync(reiniciar: true);
+    }
+
+    private Task ElegirCategoria(int? id)
+    {
+        categoriaId = id;
+        return CargarAsync(reiniciar: true);
+    }
+
+    public void Dispose() => demora?.Cancel();
+}

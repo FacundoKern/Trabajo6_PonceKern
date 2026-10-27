@@ -31,6 +31,16 @@ public static class MauiProgram
 			Timeout = TimeSpan.FromSeconds(30)
 		});
 		builder.Services.AddSingleton<AuthService>();
+		builder.Services.AddSingleton<CatalogoService>();
+
+#if ANDROID
+		// La app corre en https://0.0.0.1 dentro del WebView y las imágenes de Somee vienen por http:
+		// sin esto Android las bloquea por "contenido mixto"
+		Microsoft.AspNetCore.Components.WebView.Maui.BlazorWebViewHandler.BlazorWebViewMapper.AppendToMapping("ContenidoMixto", (handler, _) =>
+		{
+			handler.PlatformView.Settings.MixedContentMode = Android.Webkit.MixedContentHandling.AlwaysAllow;
+		});
+#endif
 
 #if DEBUG
 		builder.Services.AddBlazorWebViewDeveloperTools();

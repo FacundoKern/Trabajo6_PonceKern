@@ -1,0 +1,22 @@
+/* Imagen arriba en el teléfono; imagen a la izquierda en pantallas anchas */
+.detalle {
+    display: grid;
+    gap: 1.25rem;
+}
+
+@media (min-width: 768px) {
+    .detalle {
+        grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+        align-items: start;
+    }
+}
+
+.precio {
+    font-size: 1.75rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.descripcion {
+    white-space: pre-line;
+}
