@@ -5,6 +5,7 @@ using TiendaAPI.Data;
 using TiendaAPI.DTOs;
 using TiendaAPI.Helpers;
 using TiendaAPI.Models;
+using TiendaAPI.Services;
 
 namespace TiendaAPI.Controllers
 {
@@ -14,10 +15,12 @@ namespace TiendaAPI.Controllers
     public class ProveedoresController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly IAuditoriaService _auditoria;
 
-        public ProveedoresController(ApplicationDbContext context)
+        public ProveedoresController(ApplicationDbContext context, IAuditoriaService auditoria)
         {
             _context = context;
+            _auditoria = auditoria;
         }
 
         private static ProveedorDto ToDto(Proveedor p) => new()
@@ -76,6 +79,7 @@ namespace TiendaAPI.Controllers
 
             _context.Proveedores.Add(proveedor);
             await _context.SaveChangesAsync();
+            await _auditoria.RegistrarAsync("Crear", "Proveedor", proveedor.Id, proveedor.RazonSocial);
 
             return CreatedAtAction(nameof(GetProveedor), new { id = proveedor.Id }, ToDto(proveedor));
         }
@@ -96,6 +100,7 @@ namespace TiendaAPI.Controllers
             proveedor.Direccion = dto.Direccion;
 
             await _context.SaveChangesAsync();
+            await _auditoria.RegistrarAsync("Modificar", "Proveedor", proveedor.Id, proveedor.RazonSocial);
             return NoContent();
         }
 
@@ -109,6 +114,7 @@ namespace TiendaAPI.Controllers
 
             proveedor.Activo = false;
             await _context.SaveChangesAsync();
+            await _auditoria.RegistrarAsync("Baja", "Proveedor", proveedor.Id, proveedor.RazonSocial);
             return NoContent();
         }
     }

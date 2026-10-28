@@ -5,6 +5,7 @@ using TiendaAPI.Data;
 using TiendaAPI.DTOs;
 using TiendaAPI.Helpers;
 using TiendaAPI.Models;
+using TiendaAPI.Services;
 
 namespace TiendaAPI.Controllers
 {
@@ -14,13 +15,15 @@ namespace TiendaAPI.Controllers
     public class ProductosController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly IAuditoriaService _auditoria;
         private readonly IWebHostEnvironment _env;
         private static readonly string[] ExtensionesPermitidas = { ".jpg", ".jpeg", ".png", ".webp" };
         private const long TamanioMaximoBytes = 5 * 1024 * 1024; // 5 MB
 
-        public ProductosController(ApplicationDbContext context, IWebHostEnvironment env)
+        public ProductosController(ApplicationDbContext context, IWebHostEnvironment env, IAuditoriaService auditoria)
         {
             _context = context;
+            _auditoria = auditoria;
             _env = env;
         }
 
@@ -100,6 +103,7 @@ namespace TiendaAPI.Controllers
 
             _context.Productos.Add(producto);
             await _context.SaveChangesAsync();
+            await _auditoria.RegistrarAsync("Crear", "Producto", producto.Id, producto.Nombre);
             await _context.Entry(producto).Reference(p => p.Categoria).LoadAsync();
 
             return CreatedAtAction(nameof(GetProducto), new { id = producto.Id }, ToDto(producto));
@@ -123,6 +127,7 @@ namespace TiendaAPI.Controllers
             producto.Activo = dto.Activo;
 
             await _context.SaveChangesAsync();
+            await _auditoria.RegistrarAsync("Modificar", "Producto", producto.Id, $"{producto.Nombre} - Precio {producto.Precio:N2} - Activo {producto.Activo}");
             return NoContent();
         }
 
@@ -136,6 +141,7 @@ namespace TiendaAPI.Controllers
 
             producto.Activo = false;
             await _context.SaveChangesAsync();
+            await _auditoria.RegistrarAsync("Baja", "Producto", producto.Id, producto.Nombre);
             return NoContent();
         }
 
@@ -179,6 +185,7 @@ namespace TiendaAPI.Controllers
 
             producto.ImagenUrl = $"uploads/{nombreArchivo}";
             await _context.SaveChangesAsync();
+            await _auditoria.RegistrarAsync("SubirImagen", "Producto", producto.Id, producto.ImagenUrl);
 
             return Ok(new { mensaje = "Imagen cargada correctamente", producto.ImagenUrl });
         }

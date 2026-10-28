@@ -5,6 +5,7 @@ using TiendaAPI.Data;
 using TiendaAPI.DTOs;
 using TiendaAPI.Helpers;
 using TiendaAPI.Models;
+using TiendaAPI.Services;
 
 namespace TiendaAPI.Controllers
 {
@@ -14,10 +15,12 @@ namespace TiendaAPI.Controllers
     public class ClientesController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly IAuditoriaService _auditoria;
 
-        public ClientesController(ApplicationDbContext context)
+        public ClientesController(ApplicationDbContext context, IAuditoriaService auditoria)
         {
             _context = context;
+            _auditoria = auditoria;
         }
 
         private static ClienteDto ToDto(Cliente c) => new()
@@ -75,6 +78,7 @@ namespace TiendaAPI.Controllers
 
             _context.Clientes.Add(cliente);
             await _context.SaveChangesAsync();
+            await _auditoria.RegistrarAsync("Crear", "Cliente", cliente.Id, $"{cliente.Nombre} {cliente.Apellido}");
 
             return CreatedAtAction(nameof(GetCliente), new { id = cliente.Id }, ToDto(cliente));
         }
@@ -94,6 +98,7 @@ namespace TiendaAPI.Controllers
             cliente.Direccion = dto.Direccion;
 
             await _context.SaveChangesAsync();
+            await _auditoria.RegistrarAsync("Modificar", "Cliente", cliente.Id, $"{cliente.Nombre} {cliente.Apellido}");
             return NoContent();
         }
 
@@ -107,6 +112,7 @@ namespace TiendaAPI.Controllers
 
             cliente.Activo = false;
             await _context.SaveChangesAsync();
+            await _auditoria.RegistrarAsync("Baja", "Cliente", cliente.Id, $"{cliente.Nombre} {cliente.Apellido}");
             return NoContent();
         }
     }

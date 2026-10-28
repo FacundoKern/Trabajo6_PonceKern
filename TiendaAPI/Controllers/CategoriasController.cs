@@ -5,6 +5,7 @@ using TiendaAPI.Data;
 using TiendaAPI.DTOs;
 using TiendaAPI.Helpers;
 using TiendaAPI.Models;
+using TiendaAPI.Services;
 
 namespace TiendaAPI.Controllers
 {
@@ -14,10 +15,12 @@ namespace TiendaAPI.Controllers
     public class CategoriasController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly IAuditoriaService _auditoria;
 
-        public CategoriasController(ApplicationDbContext context)
+        public CategoriasController(ApplicationDbContext context, IAuditoriaService auditoria)
         {
             _context = context;
+            _auditoria = auditoria;
         }
 
         // GET: api/categorias?pagina=1&tamanioPagina=10&buscar=bebida
@@ -55,6 +58,7 @@ namespace TiendaAPI.Controllers
             var categoria = new Categoria { Nombre = dto.Nombre, Descripcion = dto.Descripcion };
             _context.Categorias.Add(categoria);
             await _context.SaveChangesAsync();
+            await _auditoria.RegistrarAsync("Crear", "Categoria", categoria.Id, categoria.Nombre);
 
             var resultado = new CategoriaDto { Id = categoria.Id, Nombre = categoria.Nombre, Descripcion = categoria.Descripcion };
             return CreatedAtAction(nameof(GetCategoria), new { id = categoria.Id }, resultado);
@@ -71,6 +75,7 @@ namespace TiendaAPI.Controllers
             categoria.Nombre = dto.Nombre;
             categoria.Descripcion = dto.Descripcion;
             await _context.SaveChangesAsync();
+            await _auditoria.RegistrarAsync("Modificar", "Categoria", categoria.Id, categoria.Nombre);
 
             return NoContent();
         }
@@ -89,6 +94,7 @@ namespace TiendaAPI.Controllers
 
             _context.Categorias.Remove(categoria);
             await _context.SaveChangesAsync();
+            await _auditoria.RegistrarAsync("Eliminar", "Categoria", id, categoria.Nombre);
 
             return NoContent();
         }
