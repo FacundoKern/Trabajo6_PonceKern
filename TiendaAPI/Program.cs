@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using TiendaAPI.Data;
+using TiendaAPI.Middleware;
 using TiendaAPI.Models;
 using TiendaAPI.Services;
 
@@ -88,6 +89,9 @@ using (var scope = app.Services.CreateScope())
         db.SaveChanges();
     }
 }
+
+// Primero de todo: así atrapa los errores de todo lo que viene después
+app.UseMiddleware<ManejoErroresMiddleware>();
 
 app.UseHttpsRedirection();
 
