@@ -17,6 +17,8 @@ namespace TiendaAPI.Data
         public DbSet<IngresoDetalle> IngresoDetalles => Set<IngresoDetalle>();
         public DbSet<Salida> Salidas => Set<Salida>();
         public DbSet<SalidaDetalle> SalidaDetalles => Set<SalidaDetalle>();
+        public DbSet<Auditoria> Auditorias => Set<Auditoria>();
+        public DbSet<LogError> LogErrores => Set<LogError>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -93,6 +95,27 @@ namespace TiendaAPI.Data
                 .WithMany(p => p.SalidaDetalles)
                 .HasForeignKey(d => d.ProductoId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // Auditoria -> Usuario (N:1, opcional)
+            modelBuilder.Entity<Auditoria>()
+                .HasOne(a => a.Usuario)
+                .WithMany()
+                .HasForeignKey(a => a.UsuarioId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // Índice por fecha: la consulta de auditoría siempre ordena/filtra por fecha
+            modelBuilder.Entity<Auditoria>()
+                .HasIndex(a => a.Fecha);
+
+            // LogError -> Usuario (N:1, opcional)
+            modelBuilder.Entity<LogError>()
+                .HasOne(l => l.Usuario)
+                .WithMany()
+                .HasForeignKey(l => l.UsuarioId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<LogError>()
+                .HasIndex(l => l.Fecha);
 
             // El usuario administrador inicial se crea en Program.cs al arrancar, no se inserta como dato semilla (HasData)
             // porque BCrypt necesita generar un hash con salt y parámetros en runtime; si se pone un hash fijo en código
