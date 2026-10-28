@@ -75,7 +75,7 @@ using (var scope = app.Services.CreateScope())
         {
             NombreUsuario = "admin",
             Email = "admin@tienda.com",
-            Rol = "Admin",
+            RolId = db.Roles.First(r => r.Nombre == Rol.Admin).Id,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin123$")
         });
         db.SaveChanges();

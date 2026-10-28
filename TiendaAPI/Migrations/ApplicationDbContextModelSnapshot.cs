@@ -221,6 +221,45 @@ namespace TiendaAPI.Migrations
                     b.ToTable("Proveedores");
                 });
 
+            modelBuilder.Entity("TiendaAPI.Models.Rol", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Descripcion")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Nombre")
+                        .IsUnique();
+
+                    b.ToTable("Roles");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Descripcion = "Acceso total: catálogo, compras, usuarios, reportes y auditoría",
+                            Nombre = "Admin"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Descripcion = "Ventas y consulta de catálogo",
+                            Nombre = "Empleado"
+                        });
+                });
+
             modelBuilder.Entity("TiendaAPI.Models.Salida", b =>
                 {
                     b.Property<int>("Id")
@@ -321,15 +360,15 @@ namespace TiendaAPI.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Rol")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                    b.Property<int>("RolId")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
                     b.HasIndex("NombreUsuario")
                         .IsUnique();
+
+                    b.HasIndex("RolId");
 
                     b.ToTable("Usuarios");
                 });
@@ -405,6 +444,17 @@ namespace TiendaAPI.Migrations
                     b.Navigation("Salida");
                 });
 
+            modelBuilder.Entity("TiendaAPI.Models.Usuario", b =>
+                {
+                    b.HasOne("TiendaAPI.Models.Rol", "Rol")
+                        .WithMany("Usuarios")
+                        .HasForeignKey("RolId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Rol");
+                });
+
             modelBuilder.Entity("TiendaAPI.Models.Categoria", b =>
                 {
                     b.Navigation("Productos");
@@ -430,6 +480,11 @@ namespace TiendaAPI.Migrations
             modelBuilder.Entity("TiendaAPI.Models.Proveedor", b =>
                 {
                     b.Navigation("Ingresos");
+                });
+
+            modelBuilder.Entity("TiendaAPI.Models.Rol", b =>
+                {
+                    b.Navigation("Usuarios");
                 });
 
             modelBuilder.Entity("TiendaAPI.Models.Salida", b =>

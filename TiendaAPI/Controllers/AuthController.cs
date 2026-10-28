@@ -27,6 +27,7 @@ namespace TiendaAPI.Controllers
         public async Task<ActionResult<AuthResponseDto>> Login(LoginDto dto)
         {
             var usuario = await _context.Usuarios
+                .Include(u => u.Rol)
                 .FirstOrDefaultAsync(u => u.NombreUsuario == dto.NombreUsuario && u.Activo);
 
             if (usuario is null || !BCrypt.Net.BCrypt.Verify(dto.Password, usuario.PasswordHash))
@@ -39,7 +40,7 @@ namespace TiendaAPI.Controllers
                 Token = token,
                 Expira = expira,
                 NombreUsuario = usuario.NombreUsuario,
-                Rol = usuario.Rol
+                Rol = usuario.Rol!.Nombre
             });
         }
 
@@ -53,11 +54,15 @@ namespace TiendaAPI.Controllers
             if (existe)
                 return Conflict(new { mensaje = "Ya existe un usuario con ese nombre" });
 
+            // Si no se indica rol, o no existe, queda como Empleado
+            var rol = await _context.Roles.FirstOrDefaultAsync(r => r.Nombre == dto.Rol)
+                ?? await _context.Roles.FirstAsync(r => r.Nombre == Rol.Empleado);
+
             var usuario = new Usuario
             {
                 NombreUsuario = dto.NombreUsuario,
                 Email = dto.Email,
-                Rol = dto.Rol == "Admin" ? "Admin" : "Empleado",
+                RolId = rol.Id,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password)
             };
 

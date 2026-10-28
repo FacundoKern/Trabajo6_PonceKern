@@ -20,8 +20,12 @@ namespace TiendaAPI.Services
             _config = config;
         }
 
+        // El usuario tiene que venir con el Rol cargado (Include(u => u.Rol))
         public (string Token, DateTime Expira) GenerarToken(Usuario usuario)
         {
+            var rol = usuario.Rol?.Nombre
+                ?? throw new InvalidOperationException("El usuario no tiene el rol cargado");
+
             var jwtSection = _config.GetSection("Jwt");
             var key = jwtSection["Key"]
                 ?? throw new InvalidOperationException("Falta configurar Jwt:Key en appsettings.json");
@@ -32,7 +36,7 @@ namespace TiendaAPI.Services
                 new(JwtRegisteredClaimNames.Sub, usuario.Id.ToString()),
                 new(JwtRegisteredClaimNames.UniqueName, usuario.NombreUsuario),
                 new(JwtRegisteredClaimNames.Email, usuario.Email),
-                new(ClaimTypes.Role, usuario.Rol),
+                new(ClaimTypes.Role, rol),
                 new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
 

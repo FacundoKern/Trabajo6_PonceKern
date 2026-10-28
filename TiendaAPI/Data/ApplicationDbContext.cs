@@ -8,6 +8,7 @@ namespace TiendaAPI.Data
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
 
         public DbSet<Usuario> Usuarios => Set<Usuario>();
+        public DbSet<Rol> Roles => Set<Rol>();
         public DbSet<Categoria> Categorias => Set<Categoria>();
         public DbSet<Producto> Productos => Set<Producto>();
         public DbSet<Proveedor> Proveedores => Set<Proveedor>();
@@ -25,6 +26,22 @@ namespace TiendaAPI.Data
             modelBuilder.Entity<Usuario>()
                 .HasIndex(u => u.NombreUsuario)
                 .IsUnique();
+
+            // Usuario -> Rol (N:1). No se puede borrar un rol que tenga usuarios.
+            modelBuilder.Entity<Usuario>()
+                .HasOne(u => u.Rol)
+                .WithMany(r => r.Usuarios)
+                .HasForeignKey(u => u.RolId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Rol: nombre único + los dos roles base como datos semilla
+            modelBuilder.Entity<Rol>()
+                .HasIndex(r => r.Nombre)
+                .IsUnique();
+
+            modelBuilder.Entity<Rol>().HasData(
+                new Rol { Id = 1, Nombre = Rol.Admin, Descripcion = "Acceso total: catálogo, compras, usuarios, reportes y auditoría" },
+                new Rol { Id = 2, Nombre = Rol.Empleado, Descripcion = "Ventas y consulta de catálogo" });
 
             // Producto -> Categoria (N:1)
             modelBuilder.Entity<Producto>()

@@ -16,9 +16,9 @@ namespace TiendaAPI.Models
         [Required, MaxLength(100)]
         public string Email { get; set; } = string.Empty;
 
-        // Roles simples: "Admin" o "Empleado"
-        [Required, MaxLength(20)]
-        public string Rol { get; set; } = "Empleado";
+        // Relación con la tabla Roles (N usuarios : 1 rol)
+        public int RolId { get; set; }
+        public Rol? Rol { get; set; }
 
         public bool Activo { get; set; } = true;
 

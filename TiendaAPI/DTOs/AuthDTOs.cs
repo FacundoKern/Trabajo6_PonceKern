@@ -22,7 +22,7 @@ namespace TiendaAPI.DTOs
         [Required, MinLength(6)]
         public string Password { get; set; } = string.Empty;
 
-        // Solo un usuario Admin autenticado puede crear otro Admin (ver AuthController)
+        // Nombre del rol (tabla Roles). Si no existe se asigna "Empleado".
         public string Rol { get; set; } = "Empleado";
     }
 
