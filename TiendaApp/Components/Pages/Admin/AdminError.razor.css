@@ -1,0 +1,10 @@
+/* El stack trace es largo: se desplaza dentro de su caja sin ensanchar la pantalla */
+.pila {
+    font-size: 0.7rem;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 0.5rem;
+    max-height: 60vh;
+    overflow: auto;
+}

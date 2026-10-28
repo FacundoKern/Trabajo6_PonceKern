@@ -1,0 +1,129 @@
+@page "/admin/auditoria"
+@attribute [Authorize(Roles = Roles.Admin)]
+@implements IDisposable
+@inject AdminService Servicio
+
+<h1 class="h3 mb-3">Auditoría</h1>
+
+<input type="search" class="form-control mb-2" placeholder="Buscar acción, entidad o detalle (ej.: Venta, Login)..."
+       @bind="buscar" @bind:event="oninput" @bind:after="BuscarConDemora" />
+
+<div class="row g-2 mb-3">
+    <div class="col-6">
+        <label class="form-label small mb-0" for="desde">Desde</label>
+        <input id="desde" type="date" class="form-control form-control-sm" @bind="desde" @bind:after="() => CargarAsync(1)" />
+    </div>
+    <div class="col-6">
+        <label class="form-label small mb-0" for="hasta">Hasta</label>
+        <input id="hasta" type="date" class="form-control form-control-sm" @bind="hasta" @bind:after="() => CargarAsync(1)" />
+    </div>
+</div>
+
+@if (error is not null)
+{
+    <div class="alert alert-danger">
+        @error
+        <button class="btn btn-sm btn-outline-danger ms-2" @onclick="() => CargarAsync(pagina)">Reintentar</button>
+    </div>
+}
+else if (resultado is null)
+{
+    <div class="text-center text-muted py-5">
+        <div class="spinner-border" role="status"></div>
+    </div>
+}
+else if (resultado.Items.Count == 0)
+{
+    <p class="text-muted py-4 text-center">No hay registros para esos filtros.</p>
+}
+else
+{
+    <p class="text-muted small mb-2">@resultado.TotalRegistros @(resultado.TotalRegistros == 1 ? "registro" : "registros")</p>
+
+    <div class="list-group mb-2 @(cargando ? "opacity-50" : "")">
+        @foreach (var a in resultado.Items)
+        {
+            <div class="list-group-item">
+                <div class="d-flex justify-content-between align-items-center gap-2">
+                    <span>
+                        <span class="badge @ColorAccion(a.Accion)">@a.Accion</span>
+                        <span class="small">@a.Entidad@(a.EntidadId is null ? "" : $" #{a.EntidadId}")</span>
+                    </span>
+                    <span class="small text-muted text-nowrap">@Formato.FechaHora(a.Fecha)</span>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(a.Detalle))
+                {
+                    <div class="small text-break">@a.Detalle</div>
+                }
+                <div class="small text-muted">
+                    @(a.NombreUsuario ?? "Sin usuario")@(string.IsNullOrEmpty(a.Ip) ? "" : $" · IP {a.Ip}")
+                </div>
+            </div>
+        }
+    </div>
+
+    <Paginador Pagina="pagina" TotalPaginas="resultado.TotalPaginas" Deshabilitado="cargando" CambiarPagina="CargarAsync" />
+}
+
+@code {
+    private const int TamanioPagina = 20;
+
+    private PaginaResultado<RegistroAuditoria>? resultado;
+    private string buscar = string.Empty;
+    private DateTime? desde;
+    private DateTime? hasta;
+    private int pagina = 1;
+    private bool cargando;
+    private string? error;
+    private CancellationTokenSource? demora;
+    private int consulta;
+
+    protected override Task OnInitializedAsync() => CargarAsync(1);
+
+    private async Task CargarAsync(int numero)
+    {
+        // Si mientras tanto se cambió un filtro, esta respuesta ya no sirve
+        var actual = ++consulta;
+        cargando = true;
+        error = null;
+        try
+        {
+            var datos = await Servicio.BuscarAuditoriaAsync(buscar, desde, hasta, numero, TamanioPagina);
+            if (actual != consulta) return;
+            resultado = datos;
+            pagina = numero;
+        }
+        catch (Exception)
+        {
+            if (actual != consulta) return;
+            error = "No se pudo cargar la auditoría. Revisá la conexión.";
+        }
+        cargando = false;
+    }
+
+    private async Task BuscarConDemora()
+    {
+        demora?.Cancel();
+        demora = new CancellationTokenSource();
+        try
+        {
+            await Task.Delay(400, demora.Token);
+        }
+        catch (TaskCanceledException)
+        {
+            return;
+        }
+        await CargarAsync(1);
+    }
+
+    // Colores para distinguir de un vistazo los eventos importantes
+    private static string ColorAccion(string accion) => accion switch
+    {
+        "LoginFallido" or "PagoRechazado" or "Eliminar" or "Baja" => "text-bg-danger",
+        "Venta" or "Ingreso" or "Crear" => "text-bg-success",
+        "Login" => "text-bg-info",
+        _ => "text-bg-secondary"
+    };
+
+    public void Dispose() => demora?.Cancel();
+}

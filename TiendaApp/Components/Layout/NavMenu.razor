@@ -18,5 +18,40 @@
                 <span class="bi bi-cart-fill-nav-menu" aria-hidden="true"></span> Carrito
             </NavLink>
         </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="ventas">
+                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Ventas
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="ingresos">
+                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Ingresos de mercadería
+            </NavLink>
+        </div>
+
+        @* El resto del menú solo lo ve el Admin; las pantallas además lo exigen con [Authorize(Roles = ...)] *@
+        <AuthorizeView Roles="@Roles.Admin">
+            <div class="seccion px-3">Administración</div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="admin/usuarios">
+                    <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Usuarios
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="admin/roles">
+                    <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Roles
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="admin/auditoria">
+                    <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Auditoría
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="admin/errores">
+                    <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Log de errores
+                </NavLink>
+            </div>
+        </AuthorizeView>
     </nav>
 </div>

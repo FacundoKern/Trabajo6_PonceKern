@@ -1,0 +1,118 @@
+@page "/admin/errores"
+@attribute [Authorize(Roles = Roles.Admin)]
+@implements IDisposable
+@inject AdminService Servicio
+
+<h1 class="h3 mb-3">Log de errores</h1>
+
+<input type="search" class="form-control mb-2" placeholder="Buscar en el mensaje o la ruta..."
+       @bind="buscar" @bind:event="oninput" @bind:after="BuscarConDemora" />
+
+@* Para la demostración: la API tira una excepción a propósito y el middleware la registra *@
+<button class="btn btn-sm btn-outline-danger mb-3" @onclick="Probar" disabled="@probando">
+    @(probando ? "Generando..." : "Generar error de prueba")
+</button>
+@if (mensajePrueba is not null)
+{
+    <div class="alert alert-info py-2 small">@mensajePrueba</div>
+}
+
+@if (error is not null)
+{
+    <div class="alert alert-danger">
+        @error
+        <button class="btn btn-sm btn-outline-danger ms-2" @onclick="() => CargarAsync(pagina)">Reintentar</button>
+    </div>
+}
+else if (resultado is null)
+{
+    <div class="text-center text-muted py-5">
+        <div class="spinner-border" role="status"></div>
+    </div>
+}
+else if (resultado.Items.Count == 0)
+{
+    <p class="text-muted py-4 text-center">No hay errores registrados.</p>
+}
+else
+{
+    <p class="text-muted small mb-2">@resultado.TotalRegistros @(resultado.TotalRegistros == 1 ? "error" : "errores")</p>
+
+    <div class="list-group mb-2 @(cargando ? "opacity-50" : "")">
+        @foreach (var e in resultado.Items)
+        {
+            <a href="admin/errores/@e.Id" class="list-group-item list-group-item-action">
+                <div class="d-flex justify-content-between gap-2">
+                    <span class="small font-monospace text-truncate">@e.Metodo @e.Ruta</span>
+                    <span class="small text-muted text-nowrap">@Formato.FechaHora(e.Fecha)</span>
+                </div>
+                <div class="small text-danger text-break">@e.Mensaje</div>
+                <div class="small text-muted">N° @e.Id · @(e.NombreUsuario ?? "Sin usuario")</div>
+            </a>
+        }
+    </div>
+
+    <Paginador Pagina="pagina" TotalPaginas="resultado.TotalPaginas" Deshabilitado="cargando" CambiarPagina="CargarAsync" />
+}
+
+@code {
+    private const int TamanioPagina = 20;
+
+    private PaginaResultado<LogError>? resultado;
+    private string buscar = string.Empty;
+    private int pagina = 1;
+    private bool cargando;
+    private bool probando;
+    private string? error;
+    private string? mensajePrueba;
+    private CancellationTokenSource? demora;
+
+    protected override Task OnInitializedAsync() => CargarAsync(1);
+
+    private async Task CargarAsync(int numero)
+    {
+        cargando = true;
+        error = null;
+        try
+        {
+            resultado = await Servicio.BuscarErroresAsync(buscar, numero, TamanioPagina);
+            pagina = numero;
+        }
+        catch (Exception)
+        {
+            error = "No se pudo cargar el log de errores. Revisá la conexión.";
+        }
+        cargando = false;
+    }
+
+    private async Task Probar()
+    {
+        probando = true;
+        var falla = await Servicio.ProbarErrorAsync();
+        mensajePrueba = falla ?? "La API devolvió el error 500 esperado y lo registró: aparece primero en la lista.";
+        probando = false;
+
+        if (falla is null)
+        {
+            buscar = string.Empty;
+            await CargarAsync(1);
+        }
+    }
+
+    private async Task BuscarConDemora()
+    {
+        demora?.Cancel();
+        demora = new CancellationTokenSource();
+        try
+        {
+            await Task.Delay(400, demora.Token);
+        }
+        catch (TaskCanceledException)
+        {
+            return;
+        }
+        await CargarAsync(1);
+    }
+
+    public void Dispose() => demora?.Cancel();
+}

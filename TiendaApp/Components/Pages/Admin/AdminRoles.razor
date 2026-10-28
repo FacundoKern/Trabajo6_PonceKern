@@ -1,0 +1,174 @@
+@page "/admin/roles"
+@attribute [Authorize(Roles = Roles.Admin)]
+@inject AdminService Servicio
+
+<h1 class="h3 mb-3">Roles</h1>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h2 class="h6">@(editandoId is null ? "Nuevo rol" : "Editar rol")</h2>
+        <EditForm Model="formulario" OnValidSubmit="Guardar" FormName="rol">
+            <DataAnnotationsValidator />
+
+            <div class="mb-2">
+                <InputText class="form-control" placeholder="Nombre" @bind-Value="formulario.Nombre" disabled="@(guardando || editandoBase)" />
+                <ValidationMessage For="() => formulario.Nombre" />
+                @if (editandoBase)
+                {
+                    <div class="form-text">Admin y Empleado no se pueden renombrar; solo se cambia la descripción.</div>
+                }
+            </div>
+
+            <div class="mb-2">
+                <InputText class="form-control" placeholder="Descripción (opcional)" @bind-Value="formulario.Descripcion" disabled="@guardando" />
+                <ValidationMessage For="() => formulario.Descripcion" />
+            </div>
+
+            @if (error is not null)
+            {
+                <div class="alert alert-danger py-2 texto-lineas">@error</div>
+            }
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary flex-fill" disabled="@guardando">
+                    @(editandoId is null ? "Crear rol" : "Guardar")
+                </button>
+                @if (editandoId is not null)
+                {
+                    <button type="button" class="btn btn-outline-secondary" @onclick="Cancelar" disabled="@guardando">Cancelar</button>
+                }
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+@if (errorCarga is not null)
+{
+    <div class="alert alert-danger">
+        @errorCarga
+        <button class="btn btn-sm btn-outline-danger ms-2" @onclick="CargarAsync">Reintentar</button>
+    </div>
+}
+else if (roles is null)
+{
+    <div class="text-center text-muted py-5">
+        <div class="spinner-border" role="status"></div>
+    </div>
+}
+else
+{
+    <div class="list-group mb-4">
+        @foreach (var r in roles)
+        {
+            <div class="list-group-item">
+                <div class="d-flex justify-content-between align-items-center gap-2">
+                    <span class="fw-medium">@r.Nombre</span>
+                    <span class="small text-muted text-nowrap">@r.CantidadUsuarios @(r.CantidadUsuarios == 1 ? "usuario" : "usuarios")</span>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(r.Descripcion))
+                {
+                    <div class="small text-muted">@r.Descripcion</div>
+                }
+
+                @if (confirmarId == r.Id)
+                {
+                    <div class="d-flex align-items-center gap-2 mt-2">
+                        <span class="small flex-fill">¿Eliminar el rol @r.Nombre?</span>
+                        <button class="btn btn-sm btn-danger" @onclick="() => Eliminar(r)" disabled="@guardando">Eliminar</button>
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => confirmarId = null" disabled="@guardando">No</button>
+                    </div>
+                }
+                else
+                {
+                    <div class="d-flex gap-3 mt-1">
+                        <button class="btn btn-sm btn-link p-0" @onclick="() => Editar(r)" disabled="@guardando">Editar</button>
+                        @* La API no deja borrar los roles base ni los que tienen usuarios *@
+                        @if (!r.EsBase && r.CantidadUsuarios == 0)
+                        {
+                            <button class="btn btn-sm btn-link text-danger p-0" @onclick="() => confirmarId = r.Id" disabled="@guardando">Eliminar</button>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private List<Rol>? roles;
+    private RolRequest formulario = new();
+    private int? editandoId;
+    private bool editandoBase;
+    private int? confirmarId;
+    private bool guardando;
+    private string? errorCarga;
+    private string? error;
+
+    protected override Task OnInitializedAsync() => CargarAsync();
+
+    private async Task CargarAsync()
+    {
+        errorCarga = null;
+        try
+        {
+            roles = await Servicio.ObtenerRolesAsync();
+        }
+        catch (Exception)
+        {
+            errorCarga = "No se pudieron cargar los roles. Revisá la conexión.";
+        }
+    }
+
+    private void Editar(Rol rol)
+    {
+        editandoId = rol.Id;
+        editandoBase = rol.EsBase;
+        formulario = new RolRequest { Nombre = rol.Nombre, Descripcion = rol.Descripcion };
+        confirmarId = null;
+        error = null;
+    }
+
+    private void Cancelar()
+    {
+        editandoId = null;
+        editandoBase = false;
+        formulario = new();
+        error = null;
+    }
+
+    private async Task Guardar()
+    {
+        guardando = true;
+        var datos = new RolRequest
+        {
+            Nombre = formulario.Nombre.Trim(),
+            Descripcion = string.IsNullOrWhiteSpace(formulario.Descripcion) ? null : formulario.Descripcion.Trim()
+        };
+
+        error = editandoId is null
+            ? await Servicio.CrearRolAsync(datos)
+            : await Servicio.ActualizarRolAsync(editandoId.Value, datos);
+
+        if (error is null)
+        {
+            Cancelar();
+            await CargarAsync();
+        }
+        guardando = false;
+    }
+
+    private async Task Eliminar(Rol rol)
+    {
+        guardando = true;
+        error = await Servicio.EliminarRolAsync(rol.Id);
+        confirmarId = null;
+
+        if (error is null)
+        {
+            if (editandoId == rol.Id)
+                Cancelar();
+            await CargarAsync();
+        }
+        guardando = false;
+    }
+}

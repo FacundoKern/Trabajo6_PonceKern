@@ -1,0 +1,74 @@
+@page "/ventas"
+@inject VentasService Servicio
+
+<h1 class="h3 mb-3">Ventas</h1>
+
+@if (error is not null)
+{
+    <div class="alert alert-danger">
+        @error
+        <button class="btn btn-sm btn-outline-danger ms-2" @onclick="() => CargarAsync(pagina)">Reintentar</button>
+    </div>
+}
+else if (resultado is null)
+{
+    <div class="text-center text-muted py-5">
+        <div class="spinner-border" role="status"></div>
+    </div>
+}
+else if (resultado.Items.Count == 0)
+{
+    <p class="text-muted py-4 text-center">Todavía no hay ventas registradas.</p>
+}
+else
+{
+    <p class="text-muted small mb-2">@resultado.TotalRegistros @(resultado.TotalRegistros == 1 ? "venta" : "ventas")</p>
+
+    <div class="list-group mb-2 @(cargando ? "opacity-50" : "")">
+        @foreach (var v in resultado.Items)
+        {
+            <a href="venta/@v.Id" class="list-group-item list-group-item-action">
+                <div class="d-flex justify-content-between gap-2">
+                    <span class="fw-medium">Venta N° @v.Id</span>
+                    <span class="fw-semibold text-nowrap">@Formato.Precio(v.Total)</span>
+                </div>
+                <div class="d-flex justify-content-between gap-2 small text-muted">
+                    <span class="text-truncate">@v.ClienteNombre · @v.MedioPago</span>
+                    <span class="text-nowrap">@Formato.FechaHora(v.Fecha)</span>
+                </div>
+                <div class="small text-truncate">
+                    @string.Join(", ", v.Detalles.Select(d => $"{d.Cantidad} × {d.ProductoNombre}"))
+                </div>
+            </a>
+        }
+    </div>
+
+    <Paginador Pagina="pagina" TotalPaginas="resultado.TotalPaginas" Deshabilitado="cargando" CambiarPagina="CargarAsync" />
+}
+
+@code {
+    private const int TamanioPagina = 15;
+
+    private PaginaResultado<Venta>? resultado;
+    private int pagina = 1;
+    private bool cargando;
+    private string? error;
+
+    protected override Task OnInitializedAsync() => CargarAsync(1);
+
+    private async Task CargarAsync(int numero)
+    {
+        cargando = true;
+        error = null;
+        try
+        {
+            resultado = await Servicio.ListarAsync(numero, TamanioPagina);
+            pagina = numero;
+        }
+        catch (Exception)
+        {
+            error = "No se pudieron cargar las ventas. Revisá la conexión.";
+        }
+        cargando = false;
+    }
+}

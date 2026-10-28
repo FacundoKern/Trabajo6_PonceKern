@@ -1,0 +1,99 @@
+@page "/admin/usuarios"
+@attribute [Authorize(Roles = Roles.Admin)]
+@implements IDisposable
+@inject AdminService Servicio
+
+<div class="d-flex justify-content-between align-items-center gap-2 mb-3">
+    <h1 class="h3 mb-0">Usuarios</h1>
+    <a href="admin/usuarios/nuevo" class="btn btn-primary btn-sm text-nowrap">+ Nuevo</a>
+</div>
+
+<input type="search" class="form-control mb-3" placeholder="Buscar por usuario o email..."
+       @bind="buscar" @bind:event="oninput" @bind:after="BuscarConDemora" />
+
+@if (error is not null)
+{
+    <div class="alert alert-danger">
+        @error
+        <button class="btn btn-sm btn-outline-danger ms-2" @onclick="() => CargarAsync(pagina)">Reintentar</button>
+    </div>
+}
+else if (resultado is null)
+{
+    <div class="text-center text-muted py-5">
+        <div class="spinner-border" role="status"></div>
+    </div>
+}
+else if (resultado.Items.Count == 0)
+{
+    <p class="text-muted py-4 text-center">No hay usuarios que coincidan con la búsqueda.</p>
+}
+else
+{
+    <div class="list-group mb-2 @(cargando ? "opacity-50" : "")">
+        @foreach (var u in resultado.Items)
+        {
+            <a href="admin/usuarios/@u.Id" class="list-group-item list-group-item-action">
+                <div class="d-flex justify-content-between align-items-center gap-2">
+                    <span class="fw-medium text-truncate">@u.NombreUsuario</span>
+                    <span class="d-flex gap-1">
+                        <span class="badge @(u.RolNombre == Roles.Admin ? "text-bg-primary" : "text-bg-secondary")">@u.RolNombre</span>
+                        @if (!u.Activo)
+                        {
+                            <span class="badge text-bg-danger">Inactivo</span>
+                        }
+                    </span>
+                </div>
+                <div class="small text-muted text-truncate">@u.Email</div>
+            </a>
+        }
+    </div>
+
+    <Paginador Pagina="pagina" TotalPaginas="resultado.TotalPaginas" Deshabilitado="cargando" CambiarPagina="CargarAsync" />
+}
+
+@code {
+    private const int TamanioPagina = 15;
+
+    private PaginaResultado<Usuario>? resultado;
+    private string buscar = string.Empty;
+    private int pagina = 1;
+    private bool cargando;
+    private string? error;
+    private CancellationTokenSource? demora;
+
+    protected override Task OnInitializedAsync() => CargarAsync(1);
+
+    private async Task CargarAsync(int numero)
+    {
+        cargando = true;
+        error = null;
+        try
+        {
+            resultado = await Servicio.BuscarUsuariosAsync(buscar, numero, TamanioPagina);
+            pagina = numero;
+        }
+        catch (Exception)
+        {
+            error = "No se pudieron cargar los usuarios. Revisá la conexión.";
+        }
+        cargando = false;
+    }
+
+    private async Task BuscarConDemora()
+    {
+        demora?.Cancel();
+        demora = new CancellationTokenSource();
+        try
+        {
+            await Task.Delay(400, demora.Token);
+        }
+        catch (TaskCanceledException)
+        {
+            return;
+        }
+        await CargarAsync(1);
+    }
+
+    public void Dispose() => demora?.Cancel();
+}

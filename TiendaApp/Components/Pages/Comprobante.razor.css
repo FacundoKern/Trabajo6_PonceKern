@@ -3,21 +3,3 @@
     height: 3.5rem;
     color: #198754;
 }
-
-/* Etiqueta a la izquierda y valor a la derecha */
-.datos {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    gap: 0.35rem 1rem;
-}
-
-    .datos dt {
-        font-weight: 400;
-        color: #6c757d;
-    }
-
-    .datos dd {
-        margin: 0;
-        text-align: right;
-        overflow-wrap: anywhere;
-    }

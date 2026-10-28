@@ -1,0 +1,250 @@
+@page "/ingresos/nuevo"
+@attribute [Authorize(Roles = Roles.Admin)]
+@implements IDisposable
+@inject IngresosService Servicio
+@inject CatalogoService Catalogo
+@inject NavigationManager Nav
+
+<a href="ingresos" class="btn btn-link px-0 mb-2">&larr; Ingresos</a>
+<h1 class="h3 mb-3">Nuevo ingreso</h1>
+
+@if (proveedores is null)
+{
+    @if (errorCarga is not null)
+    {
+        <div class="alert alert-danger">
+            @errorCarga
+            <button class="btn btn-sm btn-outline-danger ms-2" @onclick="CargarProveedoresAsync">Reintentar</button>
+        </div>
+    }
+    else
+    {
+        <div class="text-center text-muted py-5">
+            <div class="spinner-border" role="status"></div>
+        </div>
+    }
+}
+else
+{
+    <div class="mb-3">
+        <label class="form-label" for="proveedor">Proveedor</label>
+        <select id="proveedor" class="form-select" @bind="proveedorId" disabled="@guardando">
+            <option value="">Elegí un proveedor...</option>
+            @foreach (var p in proveedores)
+            {
+                <option value="@p.Id">@p.RazonSocial</option>
+            }
+        </select>
+    </div>
+
+    <h2 class="h6">Productos</h2>
+    <input type="search" class="form-control mb-2" placeholder="Buscar producto para agregar..."
+           @bind="buscar" @bind:event="oninput" @bind:after="BuscarConDemora" disabled="@guardando" />
+
+    @if (resultados.Count > 0)
+    {
+        <div class="list-group mb-3">
+            @foreach (var p in resultados)
+            {
+                var agregado = lineas.Any(l => l.Producto.Id == p.Id);
+                <button type="button" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center gap-2"
+                        @onclick="() => Agregar(p)" disabled="@agregado">
+                    <span class="text-truncate">@p.Nombre <span class="small text-muted">(stock @p.Stock)</span></span>
+                    <span class="small text-nowrap @(agregado ? "text-muted" : "text-primary")">@(agregado ? "Agregado" : "+ Agregar")</span>
+                </button>
+            }
+        </div>
+    }
+    else if (buscando)
+    {
+        <p class="small text-muted">Buscando...</p>
+    }
+    else if (!string.IsNullOrWhiteSpace(buscar))
+    {
+        <p class="small text-muted">No se encontraron productos.</p>
+    }
+
+    @if (lineas.Count == 0)
+    {
+        <p class="text-muted small mb-3">Todavía no agregaste productos.</p>
+    }
+    else
+    {
+        <div class="d-flex flex-column gap-2 mb-3">
+            @foreach (var l in lineas)
+            {
+                <div class="card">
+                    <div class="card-body p-2">
+                        <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                            <div class="min-w-0">
+                                <div class="fw-medium text-truncate">@l.Producto.Nombre</div>
+                                <div class="small text-muted">Stock actual @l.Producto.Stock → queda en @(l.Producto.Stock + Math.Max(l.Cantidad, 0))</div>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-link text-danger p-0" @onclick="() => lineas.Remove(l)" disabled="@guardando">Quitar</button>
+                        </div>
+                        <div class="row g-2">
+                            <div class="col-5">
+                                <label class="form-label small mb-0">Cantidad</label>
+                                <input type="number" class="form-control form-control-sm" min="1" step="1"
+                                       @bind="l.Cantidad" @bind:event="oninput" disabled="@guardando" />
+                            </div>
+                            <div class="col-7">
+                                <label class="form-label small mb-0">Costo unitario ($)</label>
+                                <input type="number" class="form-control form-control-sm" min="0" step="0.01" inputmode="decimal"
+                                       @bind="l.Costo" @bind:event="oninput" disabled="@guardando" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="d-flex justify-content-between fw-semibold fs-5 mb-3">
+            <span>Total</span>
+            <span>@Formato.Precio(lineas.Sum(l => Math.Max(l.Cantidad, 0) * Math.Max(l.Costo, 0)))</span>
+        </div>
+    }
+
+    <div class="mb-3">
+        <label class="form-label" for="observaciones">Observaciones <span class="text-muted small">(opcional)</span></label>
+        <input id="observaciones" class="form-control" maxlength="250" placeholder="Ej.: factura A 0001-00012345"
+               @bind="observaciones" disabled="@guardando" />
+    </div>
+
+    @if (error is not null)
+    {
+        <div class="alert alert-danger texto-lineas">@error</div>
+    }
+
+    <button class="btn btn-success btn-lg w-100 mb-4" @onclick="Registrar" disabled="@guardando">
+        @if (guardando)
+        {
+            <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+            <span>Registrando...</span>
+        }
+        else
+        {
+            <span>Registrar ingreso</span>
+        }
+    </button>
+}
+
+@code {
+    private List<Proveedor>? proveedores;
+    private int? proveedorId;
+    private readonly List<Linea> lineas = new();
+    private List<Producto> resultados = new();
+    private string buscar = string.Empty;
+    private string? observaciones;
+    private bool buscando;
+    private bool guardando;
+    private string? errorCarga;
+    private string? error;
+    private CancellationTokenSource? demora;
+
+    private class Linea
+    {
+        public required Producto Producto { get; init; }
+        public int Cantidad { get; set; } = 1;
+        public decimal Costo { get; set; }
+    }
+
+    protected override Task OnInitializedAsync() => CargarProveedoresAsync();
+
+    private async Task CargarProveedoresAsync()
+    {
+        errorCarga = null;
+        try
+        {
+            proveedores = await Servicio.ObtenerProveedoresActivosAsync();
+        }
+        catch (Exception)
+        {
+            errorCarga = "No se pudieron cargar los proveedores. Revisá la conexión.";
+        }
+    }
+
+    // Espera a que se deje de escribir, como en el catálogo
+    private async Task BuscarConDemora()
+    {
+        demora?.Cancel();
+        demora = new CancellationTokenSource();
+        var token = demora.Token;
+
+        if (string.IsNullOrWhiteSpace(buscar))
+        {
+            resultados = new();
+            return;
+        }
+
+        try
+        {
+            await Task.Delay(400, token);
+            buscando = true;
+            var resultado = await Catalogo.BuscarProductosAsync(buscar, null, 1, 8);
+            if (!token.IsCancellationRequested)
+                resultados = resultado.Items;
+        }
+        catch (TaskCanceledException)
+        {
+            return;
+        }
+        catch (Exception)
+        {
+            resultados = new();
+        }
+        buscando = false;
+    }
+
+    private void Agregar(Producto producto)
+    {
+        lineas.Add(new Linea { Producto = producto });
+        error = null;
+    }
+
+    private async Task Registrar()
+    {
+        error = Validar();
+        if (error is not null)
+            return;
+
+        guardando = true;
+        var (ingreso, mensajeError) = await Servicio.RegistrarAsync(new IngresoRequest
+        {
+            ProveedorId = proveedorId!.Value,
+            Observaciones = string.IsNullOrWhiteSpace(observaciones) ? null : observaciones.Trim(),
+            Detalles = lineas
+                .Select(l => new IngresoDetalleRequest { ProductoId = l.Producto.Id, Cantidad = l.Cantidad, PrecioUnitario = l.Costo })
+                .ToList()
+        });
+        guardando = false;
+
+        if (ingreso is null)
+        {
+            error = mensajeError;
+            return;
+        }
+
+        Nav.NavigateTo($"ingresos/{ingreso.Id}?nuevo=true", replace: true);
+    }
+
+    private string? Validar()
+    {
+        if (proveedorId is null)
+            return "Elegí el proveedor.";
+        if (lineas.Count == 0)
+            return "Agregá al menos un producto.";
+
+        var errores = new List<string>();
+        foreach (var l in lineas)
+        {
+            if (l.Cantidad < 1)
+                errores.Add($"{l.Producto.Nombre}: la cantidad tiene que ser al menos 1.");
+            if (l.Costo <= 0)
+                errores.Add($"{l.Producto.Nombre}: ingresá el costo unitario.");
+        }
+        return errores.Count == 0 ? null : string.Join("\n", errores);
+    }
+
+    public void Dispose() => demora?.Cancel();
+}

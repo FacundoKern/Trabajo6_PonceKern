@@ -1,5 +1,4 @@
 using System.Net.Http.Json;
-using System.Text.Json;
 using TiendaApp.Models;
 
 namespace TiendaApp.Services;
@@ -27,23 +26,13 @@ public class VentasService
     }
 
     // Devuelve la venta registrada, o el mensaje de error para mostrar (stock, pago rechazado, etc.)
-    public async Task<(Venta? Venta, string? Error)> RegistrarAsync(VentaRequest venta)
-    {
-        HttpResponseMessage respuesta;
-        try
-        {
-            respuesta = await _http.PostAsJsonAsync("api/salidas", venta);
-        }
-        catch (Exception)
-        {
-            return (null, "No se pudo conectar con el servidor. Revisá la conexión a internet.");
-        }
+    public Task<(Venta? Venta, string? Error)> RegistrarAsync(VentaRequest venta) =>
+        ApiErrores.EnviarAsync<Venta>(() => _http.PostAsJsonAsync("api/salidas", venta));
 
-        if (respuesta.IsSuccessStatusCode)
-            return (await respuesta.Content.ReadFromJsonAsync<Venta>(), null);
-
-        return (null, await LeerErrorAsync(respuesta));
-    }
+    // Historial: la API las devuelve de la más nueva a la más vieja
+    public async Task<PaginaResultado<Venta>> ListarAsync(int pagina, int tamanioPagina) =>
+        await _http.GetFromJsonAsync<PaginaResultado<Venta>>($"api/salidas?pagina={pagina}&tamanioPagina={tamanioPagina}")
+            ?? new PaginaResultado<Venta>();
 
     public async Task<Venta?> ObtenerAsync(int id)
     {
@@ -53,25 +42,5 @@ public class VentasService
 
         respuesta.EnsureSuccessStatusCode();
         return await respuesta.Content.ReadFromJsonAsync<Venta>();
-    }
-
-    // La API responde los errores como { mensaje, errores: [...] }
-    private static async Task<string> LeerErrorAsync(HttpResponseMessage respuesta)
-    {
-        try
-        {
-            using var json = JsonDocument.Parse(await respuesta.Content.ReadAsStringAsync());
-            var raiz = json.RootElement;
-
-            if (raiz.TryGetProperty("errores", out var errores) && errores.ValueKind == JsonValueKind.Array && errores.GetArrayLength() > 0)
-                return string.Join("\n", errores.EnumerateArray().Select(e => e.GetString()));
-
-            if (raiz.TryGetProperty("mensaje", out var mensaje))
-                return mensaje.GetString() ?? "Error desconocido";
-        }
-        catch (JsonException)
-        {
-        }
-        return $"El servidor respondió con un error (HTTP {(int)respuesta.StatusCode}).";
     }
 }

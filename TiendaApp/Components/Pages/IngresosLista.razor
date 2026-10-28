@@ -1,0 +1,80 @@
+@page "/ingresos"
+@inject IngresosService Servicio
+
+<div class="d-flex justify-content-between align-items-center gap-2 mb-3">
+    <h1 class="h3 mb-0">Ingresos de mercadería</h1>
+    @* Cargar ingresos es solo para Admin; el Empleado puede consultarlos *@
+    <AuthorizeView Roles="@Roles.Admin">
+        <a href="ingresos/nuevo" class="btn btn-primary btn-sm text-nowrap">+ Nuevo</a>
+    </AuthorizeView>
+</div>
+
+@if (error is not null)
+{
+    <div class="alert alert-danger">
+        @error
+        <button class="btn btn-sm btn-outline-danger ms-2" @onclick="() => CargarAsync(pagina)">Reintentar</button>
+    </div>
+}
+else if (resultado is null)
+{
+    <div class="text-center text-muted py-5">
+        <div class="spinner-border" role="status"></div>
+    </div>
+}
+else if (resultado.Items.Count == 0)
+{
+    <p class="text-muted py-4 text-center">Todavía no hay ingresos registrados.</p>
+}
+else
+{
+    <p class="text-muted small mb-2">@resultado.TotalRegistros @(resultado.TotalRegistros == 1 ? "ingreso" : "ingresos")</p>
+
+    <div class="list-group mb-2 @(cargando ? "opacity-50" : "")">
+        @foreach (var i in resultado.Items)
+        {
+            <a href="ingresos/@i.Id" class="list-group-item list-group-item-action">
+                <div class="d-flex justify-content-between gap-2">
+                    <span class="fw-medium">Ingreso N° @i.Id</span>
+                    <span class="fw-semibold text-nowrap">@Formato.Precio(i.Total)</span>
+                </div>
+                <div class="d-flex justify-content-between gap-2 small text-muted">
+                    <span class="text-truncate">@i.ProveedorNombre</span>
+                    <span class="text-nowrap">@Formato.FechaHora(i.Fecha)</span>
+                </div>
+                <div class="small text-truncate">
+                    @string.Join(", ", i.Detalles.Select(d => $"{d.Cantidad} × {d.ProductoNombre}"))
+                </div>
+            </a>
+        }
+    </div>
+
+    <Paginador Pagina="pagina" TotalPaginas="resultado.TotalPaginas" Deshabilitado="cargando" CambiarPagina="CargarAsync" />
+}
+
+@code {
+    private const int TamanioPagina = 15;
+
+    private PaginaResultado<Ingreso>? resultado;
+    private int pagina = 1;
+    private bool cargando;
+    private string? error;
+
+    protected override Task OnInitializedAsync() => CargarAsync(1);
+
+    private async Task CargarAsync(int numero)
+    {
+        cargando = true;
+        error = null;
+        try
+        {
+            resultado = await Servicio.ListarAsync(numero, TamanioPagina);
+            pagina = numero;
+        }
+        catch (Exception)
+        {
+            error = "No se pudieron cargar los ingresos. Revisá la conexión.";
+        }
+        cargando = false;
+    }
+}

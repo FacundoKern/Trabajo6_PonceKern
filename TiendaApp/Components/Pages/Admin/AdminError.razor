@@ -1,0 +1,77 @@
+@page "/admin/errores/{Id:int}"
+@attribute [Authorize(Roles = Roles.Admin)]
+@inject AdminService Servicio
+
+<a href="admin/errores" class="btn btn-link px-0 mb-2">&larr; Log de errores</a>
+
+@if (cargando)
+{
+    <div class="text-center text-muted py-5">
+        <div class="spinner-border" role="status"></div>
+    </div>
+}
+else if (error is not null)
+{
+    <div class="alert alert-danger">
+        @error
+        <button class="btn btn-sm btn-outline-danger ms-2" @onclick="CargarAsync">Reintentar</button>
+    </div>
+}
+else if (registro is null)
+{
+    <div class="alert alert-warning">El error no existe.</div>
+}
+else
+{
+    <h1 class="h4 mb-3">Error N° @registro.Id</h1>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <p class="text-danger mb-3 text-break">@registro.Mensaje</p>
+            <dl class="datos mb-0">
+                <dt>Fecha</dt>
+                <dd>@Formato.FechaHora(registro.Fecha)</dd>
+
+                <dt>Pedido</dt>
+                <dd class="font-monospace">@registro.Metodo @registro.Ruta</dd>
+
+                <dt>Tipo</dt>
+                <dd class="font-monospace">@registro.TipoExcepcion</dd>
+
+                <dt>Usuario</dt>
+                <dd>@(registro.NombreUsuario ?? "Sin usuario")</dd>
+            </dl>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(registro.StackTrace))
+    {
+        <h2 class="h6">Detalle técnico</h2>
+        <pre class="pila mb-4">@registro.StackTrace</pre>
+    }
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private LogError? registro;
+    private bool cargando = true;
+    private string? error;
+
+    protected override Task OnParametersSetAsync() => CargarAsync();
+
+    private async Task CargarAsync()
+    {
+        cargando = true;
+        error = null;
+        try
+        {
+            registro = await Servicio.ObtenerErrorAsync(Id);
+        }
+        catch (Exception)
+        {
+            error = "No se pudo cargar el error. Revisá la conexión.";
+        }
+        cargando = false;
+    }
+}

@@ -1,0 +1,244 @@
+@page "/admin/usuarios/nuevo"
+@page "/admin/usuarios/{Id:int}"
+@attribute [Authorize(Roles = Roles.Admin)]
+@inject AdminService Servicio
+@inject NavigationManager Nav
+
+<a href="admin/usuarios" class="btn btn-link px-0 mb-2">&larr; Usuarios</a>
+
+@if (errorCarga is not null)
+{
+    <div class="alert alert-danger">
+        @errorCarga
+        <button class="btn btn-sm btn-outline-danger ms-2" @onclick="CargarAsync">Reintentar</button>
+    </div>
+}
+else if (roles is null || (Id is not null && usuario is null && !noExiste))
+{
+    <div class="text-center text-muted py-5">
+        <div class="spinner-border" role="status"></div>
+    </div>
+}
+else if (noExiste)
+{
+    <div class="alert alert-warning">El usuario no existe.</div>
+}
+else if (Id is null)
+{
+    <h1 class="h3 mb-3">Nuevo usuario</h1>
+
+    <EditForm Model="nuevo" OnValidSubmit="Crear" FormName="nuevo-usuario">
+        <DataAnnotationsValidator />
+
+        <div class="mb-3">
+            <label class="form-label" for="nombre">Usuario</label>
+            <InputText id="nombre" class="form-control" @bind-Value="nuevo.NombreUsuario" autocapitalize="none" disabled="@guardando" />
+            <ValidationMessage For="() => nuevo.NombreUsuario" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label" for="email">Email</label>
+            <InputText id="email" type="email" class="form-control" @bind-Value="nuevo.Email" autocapitalize="none" disabled="@guardando" />
+            <ValidationMessage For="() => nuevo.Email" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label" for="password">Contraseña</label>
+            <InputText id="password" type="password" class="form-control" @bind-Value="nuevo.Password" autocomplete="new-password" disabled="@guardando" />
+            <ValidationMessage For="() => nuevo.Password" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label" for="rol">Rol</label>
+            <InputSelect id="rol" class="form-select" @bind-Value="nuevo.Rol" disabled="@guardando">
+                @foreach (var r in roles)
+                {
+                    <option value="@r.Nombre">@r.Nombre</option>
+                }
+            </InputSelect>
+        </div>
+
+        @if (error is not null)
+        {
+            <div class="alert alert-danger texto-lineas">@error</div>
+        }
+
+        <button type="submit" class="btn btn-primary w-100 mb-4" disabled="@guardando">
+            @(guardando ? "Guardando..." : "Crear usuario")
+        </button>
+    </EditForm>
+}
+else
+{
+    <h1 class="h3 mb-1">@usuario!.NombreUsuario</h1>
+    <p class="text-muted small mb-3">Creado el @Formato.FechaHora(usuario.FechaCreacion)</p>
+
+    @if (esUstedMismo)
+    {
+        <div class="alert alert-info small">Es tu usuario: no podés quitarte el rol Admin ni desactivarlo.</div>
+    }
+
+    <EditForm Model="editar" OnValidSubmit="Guardar" FormName="editar-usuario">
+        <DataAnnotationsValidator />
+
+        <div class="mb-3">
+            <label class="form-label" for="email">Email</label>
+            <InputText id="email" type="email" class="form-control" @bind-Value="editar.Email" autocapitalize="none" disabled="@guardando" />
+            <ValidationMessage For="() => editar.Email" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label" for="rol">Rol</label>
+            <InputSelect id="rol" class="form-select" @bind-Value="editar.RolId" disabled="@(guardando || esUstedMismo)">
+                @foreach (var r in roles)
+                {
+                    <option value="@r.Id">@r.Nombre</option>
+                }
+            </InputSelect>
+        </div>
+
+        <div class="form-check form-switch mb-3">
+            <InputCheckbox id="activo" class="form-check-input" @bind-Value="editar.Activo" disabled="@(guardando || esUstedMismo)" />
+            <label class="form-check-label" for="activo">Activo (puede iniciar sesión)</label>
+        </div>
+
+        @if (error is not null)
+        {
+            <div class="alert alert-danger texto-lineas">@error</div>
+        }
+        @if (mensaje is not null)
+        {
+            <div class="alert alert-success">@mensaje</div>
+        }
+
+        <button type="submit" class="btn btn-primary w-100 mb-4" disabled="@guardando">
+            @(guardando ? "Guardando..." : "Guardar cambios")
+        </button>
+    </EditForm>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <h2 class="h6">Blanquear contraseña</h2>
+            <EditForm Model="password" OnValidSubmit="BlanquearPassword" FormName="password-usuario">
+                <DataAnnotationsValidator />
+
+                <div class="mb-2">
+                    <InputText type="password" class="form-control" placeholder="Contraseña nueva" @bind-Value="password.NuevaPassword"
+                               autocomplete="new-password" disabled="@guardando" />
+                    <ValidationMessage For="() => password.NuevaPassword" />
+                </div>
+
+                @if (errorPassword is not null)
+                {
+                    <div class="alert alert-danger py-2">@errorPassword</div>
+                }
+                @if (mensajePassword is not null)
+                {
+                    <div class="alert alert-success py-2">@mensajePassword</div>
+                }
+
+                <button type="submit" class="btn btn-outline-primary w-100" disabled="@guardando">Cambiar contraseña</button>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int? Id { get; set; }
+
+    [CascadingParameter]
+    private Task<AuthenticationState>? EstadoAuth { get; set; }
+
+    private List<Rol>? roles;
+    private Usuario? usuario;
+    private bool noExiste;
+    private bool esUstedMismo;
+
+    private NuevoUsuario nuevo = new();
+    private UsuarioEditar editar = new();
+    private CambiarPassword password = new();
+
+    private bool guardando;
+    private string? errorCarga;
+    private string? error;
+    private string? mensaje;
+    private string? errorPassword;
+    private string? mensajePassword;
+
+    protected override Task OnParametersSetAsync() => CargarAsync();
+
+    private async Task CargarAsync()
+    {
+        errorCarga = null;
+        noExiste = false;
+        usuario = null;
+        try
+        {
+            roles = await Servicio.ObtenerRolesAsync();
+            if (Id is null)
+                return;
+
+            usuario = await Servicio.ObtenerUsuarioAsync(Id.Value);
+            if (usuario is null)
+            {
+                noExiste = true;
+                return;
+            }
+
+            editar = new UsuarioEditar { Email = usuario.Email, RolId = usuario.RolId, Activo = usuario.Activo };
+
+            var nombreActual = EstadoAuth is null ? null : (await EstadoAuth).User.Identity?.Name;
+            esUstedMismo = string.Equals(nombreActual, usuario.NombreUsuario, StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception)
+        {
+            errorCarga = "No se pudieron cargar los datos. Revisá la conexión.";
+        }
+    }
+
+    private async Task Crear()
+    {
+        guardando = true;
+        error = await Servicio.CrearUsuarioAsync(new NuevoUsuario
+        {
+            NombreUsuario = nuevo.NombreUsuario.Trim(),
+            Email = nuevo.Email.Trim(),
+            Password = nuevo.Password,
+            Rol = nuevo.Rol
+        });
+        guardando = false;
+
+        if (error is null)
+            Nav.NavigateTo("admin/usuarios", replace: true);
+    }
+
+    private async Task Guardar()
+    {
+        guardando = true;
+        mensaje = null;
+        error = await Servicio.ActualizarUsuarioAsync(Id!.Value, new UsuarioEditar
+        {
+            Email = editar.Email.Trim(),
+            RolId = editar.RolId,
+            Activo = editar.Activo
+        });
+        guardando = false;
+
+        if (error is null)
+            mensaje = "Cambios guardados.";
+    }
+
+    private async Task BlanquearPassword()
+    {
+        guardando = true;
+        mensajePassword = null;
+        errorPassword = await Servicio.CambiarPasswordAsync(Id!.Value, password);
+        guardando = false;
+
+        if (errorPassword is null)
+        {
+            mensajePassword = "Contraseña cambiada.";
+            password = new();
+        }
+    }
+}

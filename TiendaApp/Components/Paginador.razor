@@ -1,0 +1,18 @@
+@* Botones Anterior / Siguiente para los listados paginados de la API *@
+@if (TotalPaginas > 1)
+{
+    <nav class="d-flex justify-content-between align-items-center my-3" aria-label="Páginas">
+        <button class="btn btn-sm btn-outline-secondary" disabled="@(Pagina <= 1 || Deshabilitado)"
+                @onclick="() => CambiarPagina.InvokeAsync(Pagina - 1)">&larr; Anterior</button>
+        <span class="small text-muted">Página @Pagina de @TotalPaginas</span>
+        <button class="btn btn-sm btn-outline-secondary" disabled="@(Pagina >= TotalPaginas || Deshabilitado)"
+                @onclick="() => CambiarPagina.InvokeAsync(Pagina + 1)">Siguiente &rarr;</button>
+    </nav>
+}
+
+@code {
+    [Parameter] public int Pagina { get; set; }
+    [Parameter] public int TotalPaginas { get; set; }
+    [Parameter] public bool Deshabilitado { get; set; }
+    [Parameter] public EventCallback<int> CambiarPagina { get; set; }
+}
