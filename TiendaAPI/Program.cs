@@ -15,6 +15,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 // ---------- Servicios propios ----------
 builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IAuditoriaService, AuditoriaService>();
 
 // ---------- Controladores ----------
 builder.Services.AddControllers();

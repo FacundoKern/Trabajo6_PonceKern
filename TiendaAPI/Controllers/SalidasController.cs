@@ -5,6 +5,7 @@ using TiendaAPI.Data;
 using TiendaAPI.DTOs;
 using TiendaAPI.Helpers;
 using TiendaAPI.Models;
+using TiendaAPI.Services;
 
 namespace TiendaAPI.Controllers
 {
@@ -14,10 +15,12 @@ namespace TiendaAPI.Controllers
     public class SalidasController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly IAuditoriaService _auditoria;
 
-        public SalidasController(ApplicationDbContext context)
+        public SalidasController(ApplicationDbContext context, IAuditoriaService auditoria)
         {
             _context = context;
+            _auditoria = auditoria;
         }
 
         private static SalidaDto ToDto(Salida s) => new()
@@ -135,6 +138,7 @@ namespace TiendaAPI.Controllers
                 if (!pago.Aprobado)
                 {
                     await transaccion.RollbackAsync();
+                    await _auditoria.RegistrarAsync("PagoRechazado", "Salida", detalle: $"{dto.MedioPago}: {pago.Mensaje}");
                     return BadRequest(new { mensaje = pago.Mensaje, errores = new[] { pago.Mensaje } });
                 }
 
@@ -170,6 +174,9 @@ namespace TiendaAPI.Controllers
                 await _context.Entry(salida).Reference(s => s.Cliente).LoadAsync();
                 foreach (var d in salida.Detalles)
                     await _context.Entry(d).Reference(x => x.Producto).LoadAsync();
+
+                await _auditoria.RegistrarAsync("Venta", "Salida", salida.Id,
+                    $"Cliente {salida.Cliente?.Nombre} {salida.Cliente?.Apellido} - Total {salida.Total:N2} - {salida.MedioPago}");
 
                 return CreatedAtAction(nameof(GetSalida), new { id = salida.Id }, ToDto(salida));
             }

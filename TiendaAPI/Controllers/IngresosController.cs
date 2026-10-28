@@ -5,6 +5,7 @@ using TiendaAPI.Data;
 using TiendaAPI.DTOs;
 using TiendaAPI.Helpers;
 using TiendaAPI.Models;
+using TiendaAPI.Services;
 
 namespace TiendaAPI.Controllers
 {
@@ -14,10 +15,12 @@ namespace TiendaAPI.Controllers
     public class IngresosController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly IAuditoriaService _auditoria;
 
-        public IngresosController(ApplicationDbContext context)
+        public IngresosController(ApplicationDbContext context, IAuditoriaService auditoria)
         {
             _context = context;
+            _auditoria = auditoria;
         }
 
         private static IngresoDto ToDto(Ingreso i) => new()
@@ -124,6 +127,9 @@ namespace TiendaAPI.Controllers
                 await _context.Entry(ingreso).Reference(i => i.Proveedor).LoadAsync();
                 foreach (var d in ingreso.Detalles)
                     await _context.Entry(d).Reference(x => x.Producto).LoadAsync();
+
+                await _auditoria.RegistrarAsync("Ingreso", "Ingreso", ingreso.Id,
+                    $"Proveedor {ingreso.Proveedor?.RazonSocial} - {ingreso.Detalles.Count} producto(s) - Total {ingreso.Total:N2}");
 
                 return CreatedAtAction(nameof(GetIngreso), new { id = ingreso.Id }, ToDto(ingreso));
             }

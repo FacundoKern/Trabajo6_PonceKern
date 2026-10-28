@@ -14,11 +14,13 @@ namespace TiendaAPI.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly ITokenService _tokenService;
+        private readonly IAuditoriaService _auditoria;
 
-        public AuthController(ApplicationDbContext context, ITokenService tokenService)
+        public AuthController(ApplicationDbContext context, ITokenService tokenService, IAuditoriaService auditoria)
         {
             _context = context;
             _tokenService = tokenService;
+            _auditoria = auditoria;
         }
 
         // POST: api/auth/login
@@ -31,9 +33,13 @@ namespace TiendaAPI.Controllers
                 .FirstOrDefaultAsync(u => u.NombreUsuario == dto.NombreUsuario && u.Activo);
 
             if (usuario is null || !BCrypt.Net.BCrypt.Verify(dto.Password, usuario.PasswordHash))
+            {
+                await _auditoria.RegistrarAsync("LoginFallido", "Usuario", detalle: $"Intento con el usuario '{dto.NombreUsuario}'");
                 return Unauthorized(new { mensaje = "Usuario o contraseña incorrectos" });
+            }
 
             var (token, expira) = _tokenService.GenerarToken(usuario);
+            await _auditoria.RegistrarAsync("Login", "Usuario", usuario.Id, usuarioId: usuario.Id);
 
             return Ok(new AuthResponseDto
             {
@@ -68,6 +74,7 @@ namespace TiendaAPI.Controllers
 
             _context.Usuarios.Add(usuario);
             await _context.SaveChangesAsync();
+            await _auditoria.RegistrarAsync("Crear", "Usuario", usuario.Id, $"{usuario.NombreUsuario} con rol {rol.Nombre}");
 
             return StatusCode(201, new { mensaje = "Usuario creado correctamente", usuario.Id });
         }
