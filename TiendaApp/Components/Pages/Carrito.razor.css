@@ -1,0 +1,22 @@
+.miniatura {
+    width: 72px;
+    flex-shrink: 0;
+    border: 1px solid #eee;
+    border-radius: 0.375rem;
+    overflow: hidden;
+}
+
+.min-w-0 {
+    min-width: 0;
+}
+
+.nombre {
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.selector-cantidad {
+    width: 7.5rem;
+}

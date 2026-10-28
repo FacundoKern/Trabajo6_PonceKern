@@ -1,0 +1,109 @@
+@page "/carrito"
+@implements IDisposable
+@inject CarritoService Servicio
+@inject NavigationManager Nav
+
+<h1 class="h3 mb-3">Carrito</h1>
+
+@if (Servicio.Items.Count == 0)
+{
+    <div class="text-center text-muted py-5">
+        <p>Tu carrito está vacío.</p>
+        <a href="" class="btn btn-primary">Ver productos</a>
+    </div>
+}
+else
+{
+    @if (actualizando)
+    {
+        <p class="small text-muted">Actualizando precios y stock...</p>
+    }
+    else if (errorActualizacion)
+    {
+        <div class="alert alert-warning py-2 small">No se pudieron actualizar precios y stock. Se muestran los últimos conocidos.</div>
+    }
+
+    <div class="d-flex flex-column gap-2 mb-3">
+        @foreach (var item in Servicio.Items)
+        {
+            <div class="card item">
+                <div class="card-body p-2 d-flex gap-2">
+                    <a href="producto/@item.ProductoId" class="miniatura">
+                        <ImagenProducto Ruta="@item.ImagenUrl" Alt="@item.Nombre" />
+                    </a>
+                    <div class="flex-grow-1 min-w-0">
+                        <div class="d-flex justify-content-between gap-2">
+                            <span class="nombre">@item.Nombre</span>
+                            <button class="btn btn-sm btn-link text-danger p-0" @onclick="() => Servicio.Quitar(item.ProductoId)">Quitar</button>
+                        </div>
+                        <div class="small text-muted">@Formato.Precio(item.Precio) c/u</div>
+
+                        <div class="d-flex justify-content-between align-items-center mt-1">
+                            <div class="input-group input-group-sm selector-cantidad">
+                                <button class="btn btn-outline-secondary" @onclick="() => Servicio.CambiarCantidad(item.ProductoId, item.Cantidad - 1)">&minus;</button>
+                                <span class="form-control text-center">@item.Cantidad</span>
+                                <button class="btn btn-outline-secondary" @onclick="() => Servicio.CambiarCantidad(item.ProductoId, item.Cantidad + 1)"
+                                        disabled="@(item.Cantidad >= item.StockDisponible)">+</button>
+                            </div>
+                            <span class="fw-semibold">@Formato.Precio(item.Subtotal)</span>
+                        </div>
+
+                        @if (item.StockDisponible == 0)
+                        {
+                            <div class="small text-danger mt-1">Este producto se quedó sin stock. Quitalo para continuar.</div>
+                        }
+                        else if (item.SuperaStock)
+                        {
+                            <div class="small text-danger mt-1">Solo quedan @item.StockDisponible unidades.</div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="d-flex justify-content-between mb-1">
+                <span class="text-muted">Productos (@Servicio.CantidadTotal)</span>
+                <span>@Formato.Precio(Servicio.Total)</span>
+            </div>
+            <div class="d-flex justify-content-between fs-5 fw-semibold mb-3">
+                <span>Total</span>
+                <span>@Formato.Precio(Servicio.Total)</span>
+            </div>
+            <button class="btn btn-primary w-100" @onclick="@(() => Nav.NavigateTo("pago"))"
+                    disabled="@(actualizando || Servicio.HayProblemasDeStock)">
+                Continuar al pago
+            </button>
+            <button class="btn btn-link w-100 mt-1" @onclick="Servicio.Vaciar">Vaciar carrito</button>
+        </div>
+    </div>
+}
+
+@code {
+    private bool actualizando;
+    private bool errorActualizacion;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Servicio.Cambio += AlCambiar;
+
+        if (Servicio.Items.Count == 0) return;
+
+        actualizando = true;
+        try
+        {
+            await Servicio.ActualizarDesdeApiAsync();
+        }
+        catch (Exception)
+        {
+            errorActualizacion = true;
+        }
+        actualizando = false;
+    }
+
+    private void AlCambiar() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Servicio.Cambio -= AlCambiar;
+}

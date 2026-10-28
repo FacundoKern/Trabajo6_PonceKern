@@ -75,3 +75,27 @@ main {
         padding-right: 1.5rem !important;
     }
 }
+
+.usuario {
+    min-width: 0;
+}
+
+/* Ícono del carrito con la cantidad de productos */
+.carrito {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    color: #333;
+    margin-left: auto;
+}
+
+    .carrito .badge {
+        position: absolute;
+        top: -0.4rem;
+        right: -0.7rem;
+        font-size: 0.65rem;
+    }
+
+.top-row {
+    gap: 1rem;
+}

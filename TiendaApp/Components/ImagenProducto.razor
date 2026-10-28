@@ -1,0 +1,31 @@
+@* Imagen cuadrada del producto; si no tiene o no carga, muestra un ícono *@
+<div class="imagen-producto">
+    @if (Url is null || fallo)
+    {
+        <svg class="sin-imagen" viewBox="0 0 24 24" aria-label="Sin imagen" role="img">
+            <path fill="currentColor" d="M21 16.5V7.5a1 1 0 0 0-.5-.87l-8-4.5a1 1 0 0 0-1 0l-8 4.5A1 1 0 0 0 3 7.5v9a1 1 0 0 0 .5.87l8 4.5a1 1 0 0 0 1 0l8-4.5a1 1 0 0 0 .5-.87ZM12 4.15 18.95 8 12 11.85 5.05 8ZM5 9.7l6 3.33v6.62l-6-3.37Zm8 9.95v-6.62l6-3.33v6.58Z" />
+        </svg>
+    }
+    else
+    {
+        <img src="@Url" alt="@Alt" loading="lazy" @onerror="() => fallo = true" />
+    }
+</div>
+
+@code {
+    [Parameter] public string? Ruta { get; set; }
+    [Parameter] public string Alt { get; set; } = string.Empty;
+
+    private string? Url => ApiConfig.UrlImagen(Ruta);
+    private bool fallo;
+    private string? rutaAnterior;
+
+    protected override void OnParametersSet()
+    {
+        if (Ruta != rutaAnterior)
+        {
+            fallo = false;
+            rutaAnterior = Ruta;
+        }
+    }
+}

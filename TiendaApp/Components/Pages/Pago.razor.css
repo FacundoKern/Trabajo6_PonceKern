@@ -1,0 +1,8 @@
+.medio {
+    cursor: pointer;
+}
+
+/* Los errores de stock vienen uno por línea */
+.error {
+    white-space: pre-line;
+}
