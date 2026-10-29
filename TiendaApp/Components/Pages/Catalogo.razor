@@ -31,9 +31,21 @@
 }
 else if (cargando && productos.Count == 0)
 {
-    <div class="text-center text-muted py-5">
-        <div class="spinner-border" role="status"></div>
-        <p class="mt-2">Cargando productos...</p>
+    @* Esqueleto: tarjetas grises con la misma forma que las reales mientras llegan los productos *@
+    <p class="placeholder-glow small mb-2"><span class="placeholder col-3"></span></p>
+
+    <div class="grilla placeholder-wave" role="status" aria-label="Cargando productos">
+        @for (var i = 0; i < 6; i++)
+        {
+            <div class="card tarjeta">
+                <span class="placeholder esqueleto-imagen"></span>
+                <div class="card-body p-2">
+                    <span class="placeholder col-7 placeholder-lg d-block mb-2"></span>
+                    <span class="placeholder col-12 d-block mb-1"></span>
+                    <span class="placeholder col-8 d-block"></span>
+                </div>
+            </div>
+        }
     </div>
 }
 else if (productos.Count == 0)

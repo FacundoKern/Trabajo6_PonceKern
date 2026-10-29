@@ -1,0 +1,23 @@
+@* Esqueleto de un listado (ventas, ingresos, auditoría) mientras llega la primera página *@
+<p class="placeholder-glow small mb-2"><span class="placeholder col-3"></span></p>
+
+<div class="list-group placeholder-wave mb-2" role="status" aria-label="Cargando">
+    @for (var i = 0; i < Filas; i++)
+    {
+        <div class="list-group-item">
+            <div class="d-flex justify-content-between gap-3 mb-2">
+                <span class="placeholder col-5"></span>
+                <span class="placeholder col-3"></span>
+            </div>
+            <div class="d-flex justify-content-between gap-3 mb-2">
+                <span class="placeholder placeholder-sm col-6"></span>
+                <span class="placeholder placeholder-sm col-3"></span>
+            </div>
+            <span class="placeholder placeholder-sm col-9 d-block"></span>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public int Filas { get; set; } = 6;
+}

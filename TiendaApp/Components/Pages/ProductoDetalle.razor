@@ -6,8 +6,23 @@
 
 @if (cargando)
 {
-    <div class="text-center text-muted py-5">
-        <div class="spinner-border" role="status"></div>
+    @* Esqueleto con la misma distribución que el detalle: imagen, categoría, nombre, precio y botón *@
+    <div class="detalle placeholder-wave" role="status" aria-label="Cargando producto">
+        <div class="card overflow-hidden">
+            <span class="placeholder esqueleto-imagen"></span>
+        </div>
+
+        <div>
+            <span class="placeholder col-3 placeholder-sm d-block mb-2"></span>
+            <span class="placeholder col-10 placeholder-lg d-block mb-3"></span>
+            <span class="placeholder col-5 d-block mb-3 alto-precio"></span>
+            <span class="placeholder col-4 d-block mb-2"></span>
+            <span class="placeholder col-3 placeholder-sm d-block mb-3"></span>
+            <span class="placeholder btn btn-primary disabled col-12 mb-3"></span>
+            <span class="placeholder col-12 d-block mb-1"></span>
+            <span class="placeholder col-11 d-block mb-1"></span>
+            <span class="placeholder col-7 d-block"></span>
+        </div>
     </div>
 }
 else if (error is not null)

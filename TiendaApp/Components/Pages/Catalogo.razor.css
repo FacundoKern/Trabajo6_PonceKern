@@ -51,3 +51,10 @@
     overflow: hidden;
     margin-bottom: 0.25rem;
 }
+
+/* Lugar de la imagen en el esqueleto: cuadrado, como ImagenProducto */
+.esqueleto-imagen {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1;
+}

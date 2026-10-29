@@ -24,3 +24,15 @@
 .selector-cantidad {
     width: 8rem;
 }
+
+/* Lugar de la imagen en el esqueleto: cuadrado, como ImagenProducto */
+.esqueleto-imagen {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1;
+}
+
+/* Mismo alto que el precio real (1.75rem) */
+.alto-precio {
+    height: 1.75rem;
+}
