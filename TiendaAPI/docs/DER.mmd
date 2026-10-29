@@ -1,10 +1,16 @@
 erDiagram
+    ROL {
+        int Id PK
+        string Nombre UK
+        string Descripcion
+    }
+
     USUARIO {
         int Id PK
         string NombreUsuario UK
         string PasswordHash
         string Email
-        string Rol
+        int RolId FK
         bool Activo
         datetime FechaCreacion
     }
@@ -68,6 +74,10 @@ erDiagram
         datetime Fecha
         int ClienteId FK
         string Observaciones
+        string MedioPago
+        string EstadoPago
+        string CodigoOperacion
+        string TarjetaUltimos4
     }
 
     SALIDA_DETALLE {
@@ -78,6 +88,31 @@ erDiagram
         decimal PrecioUnitario
     }
 
+    AUDITORIA {
+        int Id PK
+        datetime Fecha
+        int UsuarioId FK
+        string Accion
+        string Entidad
+        int EntidadId
+        string Detalle
+        string Ip
+    }
+
+    LOG_ERROR {
+        int Id PK
+        datetime Fecha
+        string Mensaje
+        string TipoExcepcion
+        string StackTrace
+        string Metodo
+        string Ruta
+        int UsuarioId FK
+    }
+
+    ROL       ||--o{ USUARIO : "asigna"
+    USUARIO   |o--o{ AUDITORIA : "realiza"
+    USUARIO   |o--o{ LOG_ERROR : "provoca"
     CATEGORIA ||--o{ PRODUCTO : "clasifica"
     PROVEEDOR ||--o{ INGRESO : "provee"
     CLIENTE   ||--o{ SALIDA   : "compra"
