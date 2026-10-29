@@ -144,7 +144,7 @@ else
             }
 
             Carrito.Vaciar();
-            Nav.NavigateTo($"venta/{venta.Id}", replace: true);
+            Nav.NavigateTo($"venta/{venta.Id}?nueva=true", replace: true);
         }
         catch (Exception)
         {

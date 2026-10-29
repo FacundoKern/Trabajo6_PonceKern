@@ -20,6 +20,12 @@ else if (venta is null)
 }
 else
 {
+    @if (!Nueva)
+    {
+        <a href="ventas" class="btn btn-link px-0 mb-2">&larr; Ventas</a>
+    }
+
+    @* El tilde queda también en el historial: muestra que la compra salió bien *@
     <div class="text-center mb-3">
         <svg class="tilde" viewBox="0 0 16 16" aria-hidden="true">
             <path fill="currentColor" d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0m-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z" />
@@ -82,14 +88,21 @@ else
         </div>
     </div>
 
-    <div class="d-flex flex-column gap-2 mb-4">
-        <a href="" class="btn btn-primary">Seguir comprando</a>
-        <a href="ventas" class="btn btn-outline-secondary">Ver todas las ventas</a>
-    </div>
+    @* "Seguir comprando" solo tiene sentido recién terminada la compra, no al mirar una venta pasada *@
+    @if (Nueva)
+    {
+        <div class="d-flex flex-column gap-2 mb-4">
+            <a href="" class="btn btn-primary">Seguir comprando</a>
+            <a href="ventas" class="btn btn-outline-secondary">Ver todas las ventas</a>
+        </div>
+    }
 }
 
 @code {
     [Parameter] public int Id { get; set; }
+
+    // Viene en true cuando se llega desde el pago; desde el historial no viene
+    [SupplyParameterFromQuery] public bool Nueva { get; set; }
 
     private Venta? venta;
     private bool cargando = true;
