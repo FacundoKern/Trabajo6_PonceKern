@@ -1,0 +1,14 @@
+.tipo {
+    cursor: pointer;
+}
+
+.pdf {
+    width: 2rem;
+    height: 2rem;
+    flex-shrink: 0;
+    color: #dc3545;
+}
+
+.min-w-0 {
+    min-width: 0;
+}

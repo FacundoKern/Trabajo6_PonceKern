@@ -1,0 +1,216 @@
+@page "/reportes"
+@inject ReportesService Servicio
+@inject CatalogoService Catalogo
+
+<h1 class="h3 mb-3">Reportes</h1>
+
+<h2 class="h6">Tipo de reporte</h2>
+<div class="d-flex flex-column gap-2 mb-3">
+    @foreach (var (tipo, titulo, descripcion) in TiposVisibles)
+    {
+        <label class="card tipo @(seleccionado == tipo ? "border-primary" : "")">
+            <span class="card-body py-2 d-flex align-items-center gap-2">
+                <input type="radio" class="form-check-input mt-0" name="tipo" checked="@(seleccionado == tipo)"
+                       @onchange="() => Elegir(tipo)" disabled="@generando" />
+                <span>
+                    <span class="d-block fw-medium">@titulo</span>
+                    <span class="d-block small text-muted">@descripcion</span>
+                </span>
+            </span>
+        </label>
+    }
+</div>
+
+@if (seleccionado == Tipo.Stock)
+{
+    <div class="row g-2 mb-3">
+        <div class="col-7">
+            <label class="form-label small mb-0" for="categoria">Categoría</label>
+            <select id="categoria" class="form-select form-select-sm" @bind="categoriaId" disabled="@generando">
+                <option value="">Todas</option>
+                @foreach (var c in categorias)
+                {
+                    <option value="@c.Id">@c.Nombre</option>
+                }
+            </select>
+        </div>
+        <div class="col-5">
+            <label class="form-label small mb-0" for="minimo">Stock bajo si es menor a</label>
+            <input id="minimo" type="number" class="form-control form-control-sm" min="1" @bind="stockMinimo" disabled="@generando" />
+        </div>
+    </div>
+}
+else
+{
+    <div class="row g-2 mb-3">
+        <div class="col-6">
+            <label class="form-label small mb-0" for="desde">Desde</label>
+            <input id="desde" type="date" class="form-control form-control-sm" @bind="desde" disabled="@generando" />
+        </div>
+        <div class="col-6">
+            <label class="form-label small mb-0" for="hasta">Hasta</label>
+            <input id="hasta" type="date" class="form-control form-control-sm" @bind="hasta" disabled="@generando" />
+        </div>
+    </div>
+}
+
+@if (error is not null)
+{
+    <div class="alert alert-danger texto-lineas">@error</div>
+}
+
+<button class="btn btn-primary w-100 mb-3" @onclick="Generar" disabled="@generando">
+    @if (generando)
+    {
+        <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+        <span>Generando PDF...</span>
+    }
+    else
+    {
+        <span>Generar reporte</span>
+    }
+</button>
+
+@if (ruta is not null)
+{
+    <div class="card border-success mb-4">
+        <div class="card-body">
+            <div class="d-flex align-items-center gap-2 mb-3">
+                <svg class="pdf" viewBox="0 0 16 16" aria-hidden="true">
+                    <path fill="currentColor" d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2M9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5z" />
+                </svg>
+                <div class="min-w-0">
+                    <div class="fw-medium text-truncate">@Path.GetFileName(ruta)</div>
+                    <div class="small text-success">Listo para ver o enviar</div>
+                </div>
+            </div>
+
+            <button class="btn btn-outline-primary w-100 mb-3" @onclick="Ver">Ver PDF</button>
+
+            <label class="form-label small mb-0" for="destinatario">Enviar a <span class="text-muted">(opcional)</span></label>
+            <input id="destinatario" type="email" class="form-control mb-2" placeholder="correo@ejemplo.com"
+                   autocapitalize="none" @bind="destinatario" />
+            <button class="btn btn-success w-100" @onclick="Enviar">Enviar por email</button>
+
+            @if (errorAccion is not null)
+            {
+                <div class="alert alert-warning py-2 mt-3 mb-0 small">@errorAccion</div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private enum Tipo { Stock, Ventas, Ingresos }
+
+    private static readonly (Tipo Tipo, string Titulo, string Descripcion, bool SoloAdmin)[] Tipos =
+    [
+        (Tipo.Stock, "Stock", "Productos activos con su stock y el valor del inventario", false),
+        (Tipo.Ventas, "Ventas", "Salidas de mercadería en un rango de fechas", true),
+        (Tipo.Ingresos, "Ingresos", "Entradas de mercadería (compras a proveedores) en un rango de fechas", true)
+    ];
+
+    [CascadingParameter]
+    private Task<AuthenticationState>? EstadoAuth { get; set; }
+
+    private bool esAdmin;
+    private Tipo seleccionado = Tipo.Stock;
+
+    // Ventas e ingresos son solo para Admin (la API también lo controla)
+    private IEnumerable<(Tipo, string, string)> TiposVisibles =>
+        Tipos.Where(t => esAdmin || !t.SoloAdmin).Select(t => (t.Tipo, t.Titulo, t.Descripcion));
+
+    private List<Categoria> categorias = new();
+    private int? categoriaId;
+    private int stockMinimo = 5;
+
+    // Por defecto los últimos 30 días, igual que la API
+    private DateTime desde = DateTime.Today.AddDays(-30);
+    private DateTime hasta = DateTime.Today;
+
+    private bool generando;
+    private string? error;
+    private string? ruta;
+    private string? destinatario;
+    private string? errorAccion;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (EstadoAuth is not null)
+            esAdmin = (await EstadoAuth).User.IsInRole(Roles.Admin);
+
+        try
+        {
+            categorias = await Catalogo.ObtenerCategoriasAsync();
+        }
+        catch
+        {
+            // Sin categorías igual se puede sacar el reporte de todas
+        }
+    }
+
+    private void Elegir(Tipo tipo)
+    {
+        seleccionado = tipo;
+        error = null;
+    }
+
+    private async Task Generar()
+    {
+        error = null;
+        errorAccion = null;
+
+        if (seleccionado != Tipo.Stock && desde > hasta)
+        {
+            error = "La fecha \"desde\" no puede ser posterior a \"hasta\".";
+            return;
+        }
+        if (stockMinimo < 1)
+            stockMinimo = 1;
+
+        generando = true;
+        ruta = null;
+        try
+        {
+            var (archivo, mensajeError) = seleccionado switch
+            {
+                Tipo.Ventas => await Servicio.DescargarVentasAsync(desde, hasta),
+                Tipo.Ingresos => await Servicio.DescargarIngresosAsync(desde, hasta),
+                _ => await Servicio.DescargarStockAsync(categoriaId, stockMinimo)
+            };
+            ruta = archivo;
+            error = mensajeError;
+        }
+        catch (Exception)
+        {
+            error = "No se pudo guardar el PDF en el celular.";
+        }
+        generando = false;
+    }
+
+    private async Task Ver()
+    {
+        errorAccion = null;
+        try
+        {
+            await Servicio.AbrirAsync(ruta!);
+        }
+        catch (Exception)
+        {
+            errorAccion = "No hay una app para abrir PDF en el celular. Probá enviarlo por email.";
+        }
+    }
+
+    private async Task Enviar()
+    {
+        errorAccion = null;
+        try
+        {
+            await Servicio.EnviarPorEmailAsync(ruta!, destinatario);
+        }
+        catch (Exception)
+        {
+            errorAccion = "No se pudo abrir la app de correo.";
+        }
+    }
+}
