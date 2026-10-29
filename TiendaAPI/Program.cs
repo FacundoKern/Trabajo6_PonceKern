@@ -9,6 +9,9 @@ using TiendaAPI.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// QuestPDF (reportes PDF): licencia Community, gratuita para proyectos académicos / de bajos ingresos
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+
 // ---------- Base de datos ----------
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
