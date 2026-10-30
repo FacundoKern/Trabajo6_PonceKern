@@ -3,8 +3,8 @@
 Entrega: **viernes 30/10**. Grupo de 2: **A** (backend + reportes + administración) y **B** (app móvil: base, catálogo, carrito, ingresos).
 Decidan quién es A y quién es B y pongan los nombres acá.
 
-- A: ____________________
-- B: ____________________
+- A: Manuel Ponce
+- B: Facundo Kern
 
 ---
 
