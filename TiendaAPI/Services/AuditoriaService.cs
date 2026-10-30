@@ -15,6 +15,10 @@ namespace TiendaAPI.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        // El HttpContext encapsula toda la
+        // información de una petición y una respuesta HTTP individual
+        // (como la cabecera, cookies, parámetros de consulta, el usuario autenticado, etc.).
+        // Se crea cuando llega una solicitud al servidor y se destruye cuando termina.
 
         public AuditoriaService(ApplicationDbContext context, IHttpContextAccessor httpContextAccessor)
         {

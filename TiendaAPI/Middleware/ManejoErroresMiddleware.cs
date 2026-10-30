@@ -2,6 +2,9 @@ using System.Security.Claims;
 using TiendaAPI.Data;
 using TiendaAPI.Models;
 
+//capa de software que actúa como un puente entre diferentes aplicaciones, bases de datos, sistemas operativos o redes,
+//facilitando que se comuniquen y compartan datos de manera eficiente.
+
 namespace TiendaAPI.Middleware
 {
     // Atrapa cualquier excepción no controlada de la API:

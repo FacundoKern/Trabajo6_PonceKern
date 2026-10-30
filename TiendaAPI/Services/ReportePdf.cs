@@ -11,12 +11,21 @@ namespace TiendaAPI.Services
     // título + subtítulo, tabla con encabezado, líneas de resumen y número de página.
     public static class ReportePdf
     {
+        //Cultire info representa una cultura específica (que incluye un idioma, un país o región, y un calendario).
+        //Se utiliza para formatear fechas, números, monedas y comparar cadenas de texto según las reglas de cada región.
+        // Crea una configuración regional basada en Argentina:
+        // •	Utiliza formatos argentinos de números y monedas.
+        // •	Emplea el peso argentino como símbolo monetario.
+        // •	Usa convenciones locales para separadores decimales y de miles.
         public static readonly CultureInfo Cultura = new("es-AR");
+        //Define un record para describir una columna de la tabla del PDF.
 
         public record Columna(string Titulo, float Ancho = 1, bool AlinearDerecha = false);
-
+        //Convierte un valor decimal a texto con formato monetario
+        // •	"C2" significa moneda con dos decimales.
+        // •	Cultura aplica el formato regional es-AR.
         public static string Moneda(decimal valor) => valor.ToString("C2", Cultura);
-
+        //Convierte una fecha almacenada en UTC a la hora local antes de mostrarla.
         public static string Fecha(DateTime fechaUtc) => FechaHelper.ALocal(fechaUtc).ToString("dd/MM/yyyy HH:mm", Cultura);
 
         public static byte[] Generar(string titulo, string subtitulo, IList<Columna> columnas,

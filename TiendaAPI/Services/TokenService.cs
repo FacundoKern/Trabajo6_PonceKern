@@ -14,6 +14,8 @@ namespace TiendaAPI.Services
     public class TokenService : ITokenService
     {
         private readonly IConfiguration _config;
+        // abstracción que representa un conjunto de propiedades de configuración de la aplicación
+        // en formato clave-valor de solo lectura
 
         public TokenService(IConfiguration config)
         {
